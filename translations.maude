@@ -1,0 +1,213 @@
+***(
+  Translating LJ sequents into ILL
+  Author: Carlos Olarte
+  File: translations.maude
+  
+  This file implements several translations from propositional logic
+  (PL) into ILL
+
+  Formulas in PL are built as follow:
+  Atom ::= A B C P Q R
+  Formulas ::= Atom | F to F | F land F | F lor F | neg F | F sim F
+
+  where "to" is implication and "sim" bi-implication
+
+  LP sequents are build as follows 
+  Sequents: L vdash F
+  where L is a comma
+  separated (multi)set of formulas and F a formula
+
+  See http://llwiki.ens-lyon.fr/mediawiki/index.php/Translations_of_intuitionistic_logic
+  for further details on the encodings
+  
+  ***)
+    
+load ill-system .
+
+----------------
+--- Syntax of PL
+----------------
+fmod PL-SYNTAX is
+
+    --- Formulas and sets of formulas
+    sorts PLFormula SPLFormula .
+    subsort PLFormula < SPLFormula .
+    
+    ops A B C False True : -> PLFormula [ctor] .
+    op _to_ : PLFormula PLFormula -> PLFormula [ctor prec 50] .
+    op _sim_ : PLFormula PLFormula -> PLFormula [ctor prec 55] .
+    op _land_ : PLFormula PLFormula -> PLFormula [ctor prec 30] .
+    op _lor_ : PLFormula PLFormula -> PLFormula [ctor prec 30] .
+    op neg_ : PLFormula -> PLFormula [ctor prec 20] .
+    op nil : -> SPLFormula [ctor] .
+    op _,_ : SPLFormula SPLFormula -> SPLFormula [ctor assoc id: nil prec 70] .
+    
+    --- Sequents
+    sort PLSeq .
+    op _vdash_ : SPLFormula PLFormula -> PLSeq [ctor prec 90 ] .
+endfm
+    
+--- Girard's encoding
+mod CALL-BY-NAME  is
+    pr PROOF-TREE .
+    pr PL-SYNTAX .
+
+    vars F G : PLFormula .
+    var S : SPLFormula .
+    
+    op toILLF : PLFormula -> Formula .
+    eq toILLF(A) = 'A .
+    eq toILLF(B) = 'B .
+    eq toILLF(C) = 'C .
+    eq toILLF(False) = 0 . 
+    eq toILLF(True) = top .
+    eq toILLF(F to G) = ! (toILLF(F)) -o  toILLF(G) .
+    eq toILLF(F sim G) = toILLF( (F to G) land (G to F)) . --- Biimplication
+    eq toILLF(F land G) = toILLF(F) & toILLF(G) .
+    eq toILLF(F lor G) = (! toILLF(F)) o (! toILLF(G)) .
+    eq toILLF(neg F) = toILLF(F to False) .
+
+    op toILL : SPLFormula -> MSFormula .
+    eq toILL(nil) = empMS .
+    eq toILL( (F , S)) = toILLF(F) , toILL(S) .
+
+    op toBang : MSFormula -> MSFormula .
+    eq toBang(empMS) = empMS .
+    eq toBang(F:Formula, S:MSFormula) = !(F:Formula) , toBang(S:MSFormula) .
+    
+    op toILL : PLSeq -> Sequent .
+    eq toILL(S vdash F) = [emp] toBang(toILL(S)) |~ toILLF(F) .
+
+    op proveIt : PLSeq -> String .
+    eq proveIt(Sq:PLSeq) = "$" + solve(toILL(Sq:PLSeq)) + "$"  .
+
+endm
+
+--- Girard's encoding
+mod CALL-BY-VALUE  is
+    pr PROOF-TREE .
+    pr PL-SYNTAX .
+
+    vars F G : PLFormula .
+    var S : SPLFormula .
+    
+    op toILLF : PLFormula -> Formula .
+    eq toILLF(A) = ! 'A .
+    eq toILLF(B) = ! 'B .
+    eq toILLF(C) = ! 'C .
+    eq toILLF(False) = 0 . 
+    eq toILLF(True) = 1 .
+    eq toILLF(F to G) = ! (toILLF(F) -o  toILLF(G)) .
+    eq toILLF(F sim G) = toILLF( (F to G) land (G to F)) . --- Biimplication
+    eq toILLF(F land G) = toILLF(F) * toILLF(G) .
+    eq toILLF(F lor G) = toILLF(F) o toILLF(G) .
+    eq toILLF(neg F) = toILLF(F to False) .
+
+    op toILL : SPLFormula -> MSFormula .
+    eq toILL(nil) = empMS .
+    eq toILL( (F , S)) = toILLF(F) , toILL(S) .
+
+    op toILL : PLSeq -> Sequent .
+    eq toILL(S vdash F) = [emp] toILL(S) |~ toILLF(F) .
+
+    op proveIt : PLSeq -> String .
+    eq proveIt(Sq:PLSeq) = "$" + solve(toILL(Sq:PLSeq)) + "$"  .
+
+endm
+
+mod ZERO-ONE  is
+    pr PROOF-TREE .
+    pr PL-SYNTAX .
+    
+    vars F G : PLFormula .
+    var S : SPLFormula .
+    
+    op toILLF0 : PLFormula -> Formula .
+    op toILLF1 : PLFormula -> Formula .
+    eq toILLF1(A) = 'A .
+    eq toILLF1(B) = 'B .
+    eq toILLF1(C) = 'C .
+    eq toILLF0(A) = 'A .
+    eq toILLF0(B) = 'B .
+    eq toILLF0(C) = 'C .
+
+    eq toILLF1(False) = 0 .
+    eq toILLF0(False) = 0 .
+    
+    eq toILLF1(True) = 1 .
+    eq toILLF0(True) = top .
+    
+    
+    eq toILLF1(F land G) = ! (toILLF1(F) & toILLF1(G) ) .
+    eq toILLF0(F land G) = ( ! toILLF0(F)) & ( ! toILLF0(G) ) .
+
+    eq toILLF1(F lor G) = (! toILLF1(F))  o (! toILLF1(G)) .
+    eq toILLF0(F lor G) = ( ! toILLF0(F)) o ( ! toILLF0(G) ) .
+
+    eq toILLF1(F to G) = ! ( (! toILLF0(F)) -o toILLF1(G)) .
+    eq toILLF0(F to G) = ( ! toILLF1(F)) -o (! toILLF0(G) ) .
+
+    eq toILLF0(F sim G) = toILLF0( (F to G) land (G to F)) . --- Biimplication
+    eq toILLF1(F sim G) = toILLF1( (F to G) land (G to F)) . --- Biimplication
+    eq toILLF0(neg F) = toILLF0(F to False) .
+    eq toILLF1(neg F) = toILLF1(F to False) .
+
+    op toILL0 : SPLFormula -> MSFormula .
+    op toILL1 : SPLFormula -> MSFormula .
+    eq toILL0(nil) = empMS .
+    eq toILL1(nil) = empMS .
+    eq toILL0( (F , S)) = toILLF0(F) , toILL0(S) .
+    eq toILL1( (F , S)) = toILLF1(F) , toILL1(S) .
+
+    op toBang : MSFormula -> MSFormula .
+    eq toBang(empMS) = empMS .
+    eq toBang(F:Formula, S:MSFormula) = !(F:Formula) , toBang(S:MSFormula) .
+    
+
+    op toILL : PLSeq -> Sequent .
+    eq toILL(S vdash F) = [emp] toBang(toILL0(S)) |~ toILLF1(F) .
+
+    op proveIt : PLSeq -> String .
+    eq proveIt(Sq:PLSeq) = "$" + solve(toILL(Sq:PLSeq)) + "$"  .
+endm
+
+--- Translation proposed in the paper
+mod MULTIPLICATIVE is
+    pr PROOF-TREE .
+    pr PL-SYNTAX .
+
+    vars F G : PLFormula .
+    var S : SPLFormula .
+    
+    op toILLF : PLFormula -> Formula .
+    eq toILLF(A) = 'A .
+    eq toILLF(B) = 'B .
+    eq toILLF(C) = 'C .
+    eq toILLF(False) = bot . 
+    eq toILLF(True) = 1 .
+    eq toILLF(F to G) = (toILLF(F)) -o  toILLF(G) .
+    eq toILLF(F sim G) = toILLF( (F to G) land (G to F)) . --- Biimplication
+    eq toILLF(F land G) = toILLF(F) * toILLF(G) .
+    eq toILLF(F lor G) = (! toILLF(F)) o (! toILLF(G)) .
+    eq toILLF(neg F) = toILLF(F to False) .
+
+    op toILL : SPLFormula -> MSFormula .
+    eq toILL(nil) = empMS .
+    eq toILL( (F , S)) = toILLF(F) , toILL(S) .
+
+    op toBang : MSFormula -> MSFormula .
+    eq toBang(empMS) = empMS .
+    eq toBang(F:Formula, S:MSFormula) = !(F:Formula) , toBang(S:MSFormula) .
+    
+    op toILL : PLSeq -> Sequent .
+    eq toILL(S vdash F) = [emp] (toILL(S)) |~ toILLF(F) .
+
+    op proveIt : PLSeq -> String .
+    eq proveIt(Sq:PLSeq) = "$" + solve(toILL(Sq:PLSeq)) + "$"  .
+    
+endm
+
+--- Examples
+--- select CALL-BY-NAME .
+--- red proveIt( nil vdash A to A) .
+--- red proveIt( A land B vdash A lor A) .

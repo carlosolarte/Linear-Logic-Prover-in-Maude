@@ -1,0 +1,200 @@
+***(
+  Syntax of Propositional Linear Logic
+  author: Carlos Olarte
+  file: syntax.maude
+  
+  This file contains the syntax of propositional
+  linear logic formulas. We use QID (literals, e.g., 'a, 'b) to
+  denote atomic propositions 
+  
+  Some representative literals are also defined as, e.g.,
+  p,q,r,s,t,a,b with equations of the form eq p = 'p 
+    
+  F ::= A | A ^ | 1 | 0 | bot | top | F * F | F|F | F & F | F o F | F -o F
+
+  We introduce the classical connectives (including, e.g., par) and
+  also the intuitionistic ones (i.e.., -o)  In the classical system we
+  introduce the needed equations to transform F -o G into F ^ | G
+
+  Sets (separated by ;) and multisets (separated by ,) are defined in
+  the module MSET-FORMULA. The empty set is emp and the empty multiset
+  is empMS
+***)
+
+
+--- ===================
+--- SYNTAX
+--- ===================
+fmod FORMULA is
+    pr META-LEVEL * (op _;_ to op_;;_ , op _,_ to op_C_ ) .
+    sort Formula .
+
+    --- Atoms
+    sort Atom .
+    subsort Qid < Atom < Formula .
+    op _^ : Atom -> Atom [ctor prec 10] .
+    eq ( (A:Atom ^) ^ ) = A:Atom .
+
+    --- Some atoms
+    ops a b c p q s : -> Atom .
+    eq a = 'a . eq b = 'b . eq c = 'c .
+    eq p = 'p . eq q = 'q . eq s = 's .
+
+    --- units
+    op 1 : -> Formula [ctor] .
+    op 0 : -> Formula [ctor] .
+    op bot : -> Formula [ctor] .
+    op top : -> Formula [ctor] .
+
+    --- Connectives
+    op _*_ : Formula Formula -> Formula [ctor prec 25] . *** tensor
+    op _|_ : Formula Formula -> Formula [ctor prec 25] . *** par (for Classical LL)
+    op _&_ : Formula Formula -> Formula [ctor prec 30] . *** with
+    op _o_ : Formula Formula -> Formula [ctor prec 30] . *** oplus
+    op _-o_ : Formula Formula -> Formula [prec 35] . *** implication for ILL
+    op _o-o_ : Formula Formula -> Formula [prec 35] . *** biimplication for ILL
+
+    --- Exponentials
+    op !_ : Formula -> Formula [ctor prec 20] .
+    op ?_ : Formula -> Formula [ctor prec 20] .
+
+    --- Error (for meta-level)
+    op errF : -> Formula [ctor] .
+
+    --- Linear Inuitionistic Negation (just an equation )
+    op ~_ : Formula -> Formula [ctor prec 10] .
+    
+
+    ---------------------
+    vars F F' G : Formula .
+    var A : Atom .
+    ---------------------
+
+    --- Bi-implication as tensor of implication
+    eq F o-o G = (F -o G) * (G -o F) .
+
+    --- Classical negation
+    op neg : Formula -> Formula .
+    eq neg(A:Atom) = A:Atom ^ .
+    eq neg(1) = bot .
+    eq neg(0) = top .
+    eq neg(bot) = 1 .
+    eq neg(top) = 0 .
+    eq neg(F * G) = neg(F) | neg(G) .
+    eq neg(F | G) = neg(F) * neg(G) .
+    eq neg(F & G) = neg(F) o neg(G) .
+    eq neg(F o G) = neg(F) & neg(G) .
+    eq neg(F -o G) = F * neg(G) .
+    eq neg( ! F ) = ?  neg(F) .
+    eq neg( ? F ) = !  neg(F) .
+
+    --- Intuitionistic negation
+    eq ~ F = F -o bot .
+    
+    --- Removing all the bangs from a formula
+    op dropBangs : Formula -> Formula .
+    eq dropBangs( ! F ) = dropBangs(F) .
+    eq dropBangs( ? F ) = ? dropBangs(F) .
+    eq dropBangs( F * G ) =  dropBangs(F) * dropBangs(G) .
+    eq dropBangs( F | G ) =  dropBangs(F) | dropBangs(G) .
+    eq dropBangs( F & G ) =  dropBangs(F) & dropBangs(G) .
+    eq dropBangs( F o G ) =  dropBangs(F) o dropBangs(G) .
+    eq dropBangs( F -o G ) =  dropBangs(F) -o dropBangs(G) .
+    eq dropBangs(F) = F [owise] .
+
+    --- Releasing on the Right
+    op releaseR : Formula -> Bool .
+    eq releaseR(A ^) = true .
+    eq releaseR(bot) = true .
+    eq releaseR(top) = true .
+    eq releaseR(F | F') = true .
+    eq releaseR(F & F') = true .
+    eq releaseR(? F) = true .
+    eq releaseR(F -o F') = true .
+    eq releaseR(F) = false [owise] .
+
+    --- Releasing on the Left
+    op releaseL : Formula -> Bool .
+    eq releaseL(F) = not releaseR(F) .
+    
+    --- Testing if a formula is an atom
+    op isAtom : Formula -> Bool .
+    eq isAtom(A) = true .
+    eq isAtom(F) = false [owise] .
+
+    --- Testing if a formula is a positive atom
+    op isPosAtom : Formula -> Bool .
+    eq isPosAtom(Q:Qid) = true .
+    eq isPosAtom(F) = false [owise] .
+
+    --- Testing if a formula is a negative atom
+    op isNegAtom : Formula -> Bool .
+    eq isNegAtom(Q:Qid ^) = true .
+    eq isNegAtom(F) = false [owise] .
+
+    --- To Latex
+    op toTex : Formula -> String .
+    eq toTex(Q:Qid) = string(Q:Qid) .
+    eq toTex(Q:Qid ^) = string(Q:Qid) + "^{\\LLperp}" .
+    eq toTex(1) = "\\LLone" .
+    eq toTex(0) = "\\LLzero" .
+    eq toTex(bot) = "\\LLbot" .
+    eq toTex(top) = "\\LLtop" .
+    eq toTex(F * G) = toTex(F) + " \\LLtensor " + toTex(G) .
+    eq toTex(F | G) = toTex(F) + " \\LLpar " + toTex(G) .
+    eq toTex(F & G) = toTex(F) + " \\LLwith " + toTex(G) .
+    eq toTex(F o G) = toTex(F) + " \\LLplus " + toTex(G) .
+    eq toTex(F -o G) = toTex(F) + " \\LLimp " + toTex(G) .
+    eq toTex(! F) = " \\LLbang (" + toTex(F) + ")" .
+    eq toTex(? F) = " \\LLquest " + toTex(F) .
+endfm
+
+--- ===================
+--- SETS AND MULTISETS
+--- OF FORMULAS
+--- ===================
+
+fmod MSET-FORMULA  is
+    pr FORMULA .
+
+    --- Sets
+    sort SFormula .
+    --- Multisets
+    sort MSFormula .
+
+    subsort Formula  < SFormula MSFormula .
+
+    --- Empty set/mset
+    op emp : -> SFormula .
+    op empMS : -> MSFormula .
+
+    --- Sets are build with ;
+    op _;_ : SFormula SFormula -> SFormula [ctor assoc comm id: emp] .
+    eq F:Formula ; F:Formula = F:Formula . *** idempotency
+
+    --- Multisets are built with ,
+    op _,_ : MSFormula MSFormula -> MSFormula [ctor assoc comm id: empMS] .
+
+    --- to Latex
+    op toTexS : SFormula -> String .
+    op toTexMS : MSFormula -> String .
+    eq toTexS(emp) = " \\LLempty " .
+    eq toTexMS(empMS) = " \\LLempty " .
+    eq toTexS(F:Formula ; S:SFormula) = toTex(F:Formula) +
+	( if S:SFormula == emp then " " else " , " + toTexS(S:SFormula) fi ) .
+    eq toTexMS(F:Formula , S:MSFormula) = toTex(F:Formula) +
+	( if S:MSFormula == empMS then " " else " , " + toTexMS(S:MSFormula)fi )  .
+
+    --- Negation of a multiset of formulas
+    op neg : MSFormula -> Formula .
+    eq neg (empMS) = empMS .
+    eq neg ( (F:Formula , L:MSFormula)) = neg(F:Formula) , neg(L:MSFormula) .
+endfm
+    
+
+--- Some examples
+
+--- red ! 'a o ! 'b * ! 'c .
+--- red ! 'a o ! 'b * ! 'c == (! 'a) o ( (! 'b) * (! 'c)) . *** Checking precedence
+--- red toTex(! 'a o ! 'b * ! 'c) .
+--- red neg(! 'a o ! 'b * ! 'c) .

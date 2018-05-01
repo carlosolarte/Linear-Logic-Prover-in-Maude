@@ -1,0 +1,290 @@
+***(
+  Focused system for Classical Linear Logic 
+  author: Carlos Olarte
+  file: cll-system.maude
+  
+  Sequents may have the following shape
+  (1) unfocus:|~ [ Gamma ] Delta 
+  The equational theory defined in the module CLL-EQ applies all the
+  connectives belonging to the negative phase (in any order)
+  Initial goals must use sequents of this shape (in order to guarantee
+    that the derivations starts with a negative phase)
+  ------------------------------------------------------------------
+  (2) Focus on the right [ Gamma ] Delta ==> G
+  G is decomposed until a negative formula is found and the sequent is
+  reduced to a sequent of the shape (3) below
+  ------------------------------------------------------------------
+  (3) End of the positive phase |- [Gamma ] Delta  G
+  Sequents of this shape signals the end of the positive phase
+  ------------------------------------------------------------------
+  (4) proved(R, Gamma, Delta, G)
+  Proved sequent with the rule R
+
+  A configuration takes the form { L } where L is a list of unproved
+  sequents . Initial goals take the form prove(S) where S is a sequent
+  or prove(F) where F is a formula
+
+  Definition of the rules (positive phase) are in the module
+  CLL-RL. Definitions for the negative phase are in the functional
+  module CLL-EQ
+
+  Module PROOF-TREE offers facilities to build a proof tree using the
+  meta-level and then, it generates LaTeX code
+
+  For printing(generating latex code), the initial goal is solve(S)
+  where S is a sequent (of the shape |~)
+  ***)
+    
+load syntax .
+
+--------------
+--- Sequents
+--------------
+fmod CLL-SEQUENT is 
+    sort Sequent .
+    pr  MSET-FORMULA .
+
+    --- Negative phase Sequent
+    op |- [_]_ : SFormula MSFormula  -> Sequent [prec 60] .
+    --- Sequent needing the negative phase
+    op |~ [_]_ : SFormula MSFormula  -> Sequent [prec 60] .
+    --- Focused sequent
+    op [_]_ ==> _ : SFormula MSFormula Formula  -> Sequent [prec 60] .
+    --- Proved sequent
+    op proved : Qid SFormula MSFormula  -> Sequent [ctor] .
+    --- Error for the meta-level
+    op error : -> Sequent [ctor] .
+    
+    --- List of sequents
+    sort LSequent .
+    subsort Sequent < LSequent .
+    --- Empty list os sequents
+    op none : -> LSequent .
+    --- Building lists of sequents
+    op _|_ : LSequent LSequent -> LSequent [ctor assoc id: none prec 70] .
+    
+    --- Configurations
+    sort Conf .
+    op {_} : LSequent -> Conf [ctor] .
+    --- All the goals were proved
+    op proved : -> Conf [ctor] .
+    --- Error for the meta-level
+    op error : -> Conf [ctor] .
+    --- Returns the first sequent in a non-empty configuration
+    op first : Conf -> Sequent .
+    eq first({ Sq:Sequent | L:LSequent}) = Sq:Sequent .
+    eq first( { none} ) = error .
+    --- Returns the list of sequents of a configuration
+    op lseq : Conf -> LSequent .
+    eq lseq( {L:LSequent} ) = L:LSequent .
+
+    --- Initial goal
+    op prove : Sequent -> Conf .
+    --- We assume that Sq is a sequent of the shape |~ 
+    eq prove(Sq:Sequent) = { Sq:Sequent } .
+    op prove : Formula -> Conf .
+    eq prove(F:Formula) = { |~ [emp] (F:Formula) } .
+
+    --- to Latex
+    var S : SFormula .
+    var L : MSFormula .
+    vars F G : Formula .
+    var R : Qid .
+    var Sq : Sequent .
+    var LSq : LSequent .
+
+    op toTex : Sequent -> String .
+    op toTexL : LSequent -> String .
+    eq toTex(error) = "failed" .
+    eq toTex(|~ [S] L) = "\\LLSecC{" + toTexS(S) + "}{" + toTexMS(L) + "}" .
+    eq toTex(|- [S] L) = "\\LLSecC{" + toTexS(S) + "}{" + toTexMS(L) + "}" .
+    eq toTex([S] L ==> F) = "\\LLSecRC{" + toTexS(S) + "}{" + toTexMS(L) + "}{" + toTex(F) + "}" .
+    eq toTex(proved(R, S, L)) = "\\infer[" + string(R) + "]{" + "\\LLSecC{" + toTexS(S) + "}{" + toTexMS(L) + "}" + "}{}" .
+    eq toTexL(none) = " " .
+    eq toTexL(Sq | LSq ) = toTex(Sq) + ( if  LSq == none then " " else " & " + toTexL(LSq) fi ) .
+    
+endfm
+
+-----------------------------------------
+--- Equations defining the negative phase
+-----------------------------------------
+fmod CLL-EQ is
+    pr CLL-SEQUENT .
+
+    vars CC CC' : SFormula . --- classical contexts
+    vars CL CL' : MSFormula . --- linear contexts
+    vars F F' G G' : Formula .
+    vars A A' : Atom .
+    vars L L1 L2 : LSequent .
+    var Sq : Sequent .
+    --- Rules of the negative phase
+    eq F -o G = neg(F) | G .
+    eq |~ [CC] CL , bot  =
+	|~ [CC] CL . --- bot
+    eq |~ [CC] CL , top =
+	proved('\Rtop,  CC ,  (CL , top))  . --- TOP
+    eq |~ [CC] CL, F | F' =
+	|~ [CC] CL, F , F' . --- par
+    eq |~ [CC] CL, G & G' =
+	(|~ [CC] CL, G) | (|~ [CC] CL, G') . --- with
+    eq |~ [CC] CL, ? F =
+	|~ [CC ; F] CL . --- quest
+
+	--- some simplifications (due to LL equivalence)
+    eq |~ [CC ; F o F'] CL = |~ [CC ; F ; F'] CL . --- ?(F + F') == ?F | ? F'
+    eq |~ [CC ; top] CL =  proved('\Rtop , (CC ; top), CL) . --- top
+endfm
+
+-------------------------------------
+--- Rules defining the positive phase
+-------------------------------------
+mod CLL-RL is
+    pr CLL-SEQUENT .
+    vars CC CC' : SFormula . *** classical contexts
+    vars CL CL' : MSFormula . *** linear contexts
+    vars F F' G G' : Formula .
+    vars A A' : Atom .
+    vars L L'  : LSequent .
+    vars S S' T T' Sq : Sequent .
+
+    ----------------------------------------
+    --- Auxiliar function handling the meta-level operations
+    ----------------------------------------
+    --- Transforming a list of |~ sequents into a list of |- sequents
+    op readySeq : LSequent -> LSequent .
+    eq readySeq(none) = none .
+    eq readySeq(( |~ [CC] CL) | L) = (|- [CC] CL) | readySeq(L) .
+    eq readySeq(Sq | L) = Sq | readySeq(L) [owise] .
+
+    --- Handling the negative phase (via metaReduce in the equational module)
+    op negPhase : Sequent -> LSequent .
+    eq negPhase(S) = readySeq(downTerm(getTerm(metaReduce( upModule('CLL-EQ, false), upTerm(S))), error)) .
+
+    
+    --- Negative phase
+    rl [Rneg] : { (|~ [CC] CL) | L } => { negPhase(|~ [CC] CL) | L } .
+    --- discarding proved sequents
+    rl [prP] : { proved(Q:Qid, CC,  CL) | L } => { L } .
+    --- ending the proof
+    rl [endP] : { none } => proved .
+    --- One
+    rl [Rone] : { ([CC] empMS ==> 1) | L } => { proved('\Rone , CC , (empMS, 1)) | L } .
+    --- Init
+    rl [Rinit] : { ([CC] A ^ ==> A) | L } => { proved ('\Rinit , CC, (A ^ , A))| L } .
+    rl [Rinit] : { ([CC ; A ^] empMS ==> A) | L } => { proved ('\RinitC , (CC ; A ^) , A)| L } .
+    --- Tensor
+    rl [Rtensor] : { ([CC] CL, CL' ==> G * G') | L } => { ([CC] CL ==> G) | ([CC] CL' ==> G') | L } .
+    --- Oplus
+    rl [RplusA] : { ([CC] CL ==> G o G') | L } => { ([CC] CL ==> G ) | L } .
+    rl [RplusB] : { ([CC] CL ==> G o G') | L } => { ([CC] CL ==> G' ) | L } .
+    --- BangL
+    rl [Rbang] : { ([CC] empMS ==> ! G) | L } => { (|~ [CC] G) | L } .
+    --- Deciding
+    crl [RdecideR] : { (|- [CC] (CL,F)) | L } => { ([CC] CL ==> F) | L } if not isNegAtom(F) .
+    crl [RdecideC] : { (|- [CC ; F] CL) | L } => { ( [CC ; F] CL ==> F) | L } if not isNegAtom(F) .
+    
+    --- Release
+    crl [RreleaseR] : { ([CC] CL ==> G) | L } => { ( |~ [CC] CL , G) | L } if releaseR(G) .
+endm
+
+--- Proof Trees
+mod  PROOF-TREE is
+    pr CLL-RL .
+    --- Trees and list of trees
+    sorts Tree LTree .
+    subsort String Sequent < Tree < LTree .
+    --- Empty tree
+    op niltree : -> LTree [ctor] .
+    --- Error tree (meta-level)
+    op errtree : -> Tree [ctor] .
+    --- Concatenating lists of trees
+    op _,_ : LTree LTree -> LTree [ctor assoc id: niltree] .
+    --- Tree constructor
+    op t : Qid String LTree -> Tree .
+
+    --- From list of sequents to lists of trees
+    op toTreeList : LSequent -> LTree .
+    eq toTreeList(none) = niltree .
+    eq toTreeList(Sq:Sequent | LS:LSequent) = Sq:Sequent , toTreeList(LS:LSequent) .
+
+    -----------------------------------
+    var Sq : Sequent .
+    vars LSq L1 L1' L2 L2' : LSequent .
+    vars TS TS' : TraceStep .
+    vars Tr Tr' : Trace? .
+    vars T T' : Term .
+    vars Ty Ty' :  Type .
+    vars R R' : Rule .
+    vars t t' : Tree .
+    var Q : Qid .
+    var Str : String .
+    -----------------------------------
+
+    --- Return the difference between 2 lists of sequents (assuming that tail are the same )
+    op tailDiference1 : LSequent LSequent -> LSequent .
+    op tailDiference2 : LSequent LSequent -> LSequent .
+    eq tailDiference1( (L1 | L1') , (L2 | L1')) = L1 .
+    eq tailDiference2( (L1 | L1') , (L2 | L1')) = L2 .
+
+    --- Generating a trace (lists of terms explored in a search procedure) from a sequent
+    op toTrace : Sequent -> Trace .
+    eq toTrace(Sq) = metaSearchPath(upModule('CLL-RL, false), upTerm(prove(Sq)), 'proved.Conf , nil , '*, unbounded , 0 ) .
+
+    --- Obtaining the first element of the sequent 
+    op getFirst : Trace -> Tree .
+    eq getFirst( ({ T , Ty, R } Tr) ) = (first(downTerm(T, (error).Conf))) .
+
+    --- Generating trees
+    --- Sq expected to be of the form |~
+    op toTree : Sequent -> Tree .
+    ceq toTree(Sq:Sequent) = (if (Tr == (failure).Trace?) then errtree else toTree(Tr, getFirst(Tr)) fi)
+      if Tr := toTrace(Sq:Sequent) .
+    op toTree : Trace Tree -> Tree .
+    eq toTree(nil, t) = errtree .
+    eq toTree( { T , Ty, R }, t ) = t . --- Last transition is only to move from { none} to proved
+    ceq toTree( ({ T , Ty, R } { T' , Ty', R' } Tr) , t) = toTree( ({ T' , Ty', R' } Tr) , update(t, L1, L2, ruleName(R))) 
+      if L1 := tailDiference1(lseq(downTerm(T , error)) , lseq(downTerm(T' , error))) /\
+	  L2 := tailDiference2(lseq(downTerm(T , error)) , lseq(downTerm(T' , error))) .
+
+      
+      --- Updating the derivation tree (Last parameter is the rule's name)
+    op update : Tree LSequent LSequent Qid -> Tree .
+    eq update(t , Sq, LSq, Q:Qid) =
+	downTerm(getTerm(metaRewrite(
+	      newModule(upTerm(Sq),upTerm(t( (qid("\\" + string(Q:Qid))) , toTex(Sq) , toTreeList(LSq)))),
+	      upTerm(t) , 1 )), errtree) .
+
+    --- Generates a (meta)module to simplify the process of
+    --- transforming trees. Basically, the module has a unique rewrite
+    --- rule that updates one of the nodes (a sequent) into a tree
+    --- (with the latex code of the sequent and with the needed
+    --- children)
+    op newModule : Term Term -> Module .
+    eq newModule(T:Term, T':Term) = (mod 'SUBST-TREE is including 'BOOL . protecting 'PROOF-TREE . sorts none . none none none none rl T:Term => T':Term [none] . endm) .
+
+    --- Return the name of a rule
+    op ruleName : Rule -> Qid .
+    eq ruleName(( ( rl T:Term => T':Term [ label(r:Qid) AS:AttrSet ]. ) R:RuleSet )) = r:Qid .
+    eq ruleName(( (crl  T:Term => T':Term if C:Condition [ label(r:Qid) AS:AttrSet ]. ) R:RuleSet )) = r:Qid .
+
+      --- From trees to String
+    op printTree : Tree -> String .
+    op printTreeL : LTree -> String .
+    eq printTree(errtree) = "fail" .
+    eq printTree(t(Q, Str, LT:LTree)) = if (Q == '\prP) then "" else "\\infer[" + string(Q) + "]{" + Str + "}{" + printTreeL(LT:LTree) + "}" fi .
+    eq printTreeL(niltree) = "" .
+    eq printTreeL( t , LT:LTree) = printTree(t) + if (LT:LTree =/= niltree) then " & " + printTreeL(LT:LTree)  else " " fi .
+
+    --- Initial Goal
+    op solve : Sequent -> String .
+    eq solve(Sq:Sequent) = printTree(toTree(Sq:Sequent)) .
+endm
+
+--- Some tests
+--- search [1] prove(|~[emp]p | p ^) =>* proved .
+--- search [1] prove(|~[emp] (p * p) | ? p ^) =>* proved .
+--- red solve(|~ [emp] p | p ^) .
+--- red solve(|~[emp] (p * p) | ? p ^) .
+
+--- red solve( |~ [emp] (( 'A -o ? 'B) -o 'A) -o ? 'A) .
+--- red solve(|~ [emp] ((( 'A * top ) & ( 'B * top )) -o 0 ) -o (( 'A  -o 'C ) o ( 'B -o 'D ))  ) .

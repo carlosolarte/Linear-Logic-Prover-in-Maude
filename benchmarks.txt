@@ -1,0 +1,61 @@
+nil vdash A to A 
+A to B, B to C vdash A to C 
+A to (B to C) vdash B to (A to C)
+A to (B to C) vdash (A land B) to C 
+A land B to C vdash A to ( B to C) 
+A to B vdash (B to C) to (A to C) 
+A to B vdash (C to A) to (C to B) 
+A to B vdash A land C to B land C 
+A to B vdash C land  A  to C land B 
+neg A vdash A to B 
+A vdash  neg A to B 
+B  vdash A to B 
+A to B vdash  neg B to  neg A 
+A to  neg B vdash (neg neg B) to (neg A)  
+A to B, B to A vdash A sim B 
+A sim B vdash A to B 
+A sim B vdash B to A 
+A sim B, A vdash  B 
+A sim B, B vdash  A 
+nil vdash A sim A  
+A sim B vdash B sim A 
+A sim B, B sim C vdash A sim C 
+A to (B to C),  neg neg A,  neg neg B  vdash  neg neg C 
+neg  neg (A to B) vdash  neg  neg A to  neg neg B  
+neg  neg (A to B),  neg  neg (B to C) vdash  neg  neg (A to C) 
+nil vdash  neg  neg (A land B)  sim  neg neg A land  neg neg B 
+nil vdash  neg  neg (A sim B)  sim  neg neg (A to B)  land  neg neg (B to A)  
+A  sim B  vdash A  to C  sim B  to C 
+A  sim B  vdash C  to A  sim C  to B 
+A  sim B  vdash A  land C  sim B  land C 
+A  sim B  vdash C  land A  sim C  land B 
+A  sim B  vdash  neg A  sim  neg B 
+nil vdash (A  land B)  land C  sim A  land (B  land C) 
+nil vdash A  land B  sim B  land A 
+nil vdash A  land A  sim A 
+A  vdash A  to B  sim B 
+B  vdash A  to B  sim B 
+neg A  vdash A  to B  sim  neg A 
+neg B  vdash A  to B  sim  neg A 
+B  vdash A  land B  sim A 
+neg B  vdash A  land B  sim B 
+nil vdash A  to  neg  neg A 
+nil vdash  neg  neg  neg A  sim  neg A 
+nil vdash  neg (A  land  neg A) 
+nil vdash  neg (A  sim  neg A) 
+nil vdash  neg  neg ( neg  neg A  to A) 
+nil vdash A  land (B  land  neg B)  sim B  land  neg B 
+nil vdash (A  to B)  to  neg (A  land  neg B) 
+nil vdash (A to neg B) sim (neg (A land B)) 
+nil vdash (neg (A land B)) sim ((neg neg A) to neg B)
+neg neg B to B vdash (neg neg A to B) sim (A to B)
+neg neg B to B vdash (A to B) sim neg (A land neg B)
+nil vdash ( neg  neg A  to B)  to  neg (A  land  neg B) 
+nil vdash A  land B  to  neg (A  to  neg B) 
+nil vdash (A  land  neg B)  to  neg (A  to B) 
+nil vdash  neg  neg A  land B  to  neg (A  to  neg B) 
+nil vdash (neg neg A land neg B) sim (neg (A to B))
+nil vdash (neg (A to B)) sim (neg neg (A land neg B))
+nil vdash (neg neg (A to B)) sim  ((neg (A land neg B)))
+nil vdash (neg (A land neg B)) sim ((A to neg neg B))
+nil vdash (A to neg neg B) sim ((neg neg A) to neg neg B)
