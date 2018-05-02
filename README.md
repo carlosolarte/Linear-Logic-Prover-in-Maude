@@ -14,7 +14,7 @@ The implementation includes the following files:
 - <b>translations.maude</b>: Different translations from LJ sequents into linear logic formulas.
 
 ## Benchmarks 
-The directory TPLP contains several benchmarks resulting from translations of Kleene's intuitionistic theorems into linear logic formulas. The file benchmark.txt contains some intuitionistic sequents (see syntax below) that can be translated into lienar logic sequents (translations.maude).
+The directory TPTP contains several benchmarks resulting from translations of Kleene's intuitionistic theorems into linear logic formulas. The file benchmark.txt contains some intuitionistic sequents (see syntax below) that can be translated into lienar logic sequents (translations.maude).
 
 ## Examples
 Loading the system:
