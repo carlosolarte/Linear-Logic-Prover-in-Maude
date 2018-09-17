@@ -1,0 +1,65 @@
+***(
+  Syntax of propositional logic
+  Author: Carlos Olarte
+  File: PL-Theory.maude
+
+  Formulas in PL are built as follow:
+  Atom ::= A B C P Q R
+  Formulas ::= Atom | F to F | F land F | F lor F | neg F | F sim F
+
+  where "to" is implication and "sim" bi-implication
+
+  LP sequents are build as follows 
+  Sequents: L vdash F
+  where L is a comma
+  separated (multi)set of formulas and F a formula
+
+  ***)
+
+    
+----------------
+--- Syntax of PL
+----------------
+fmod PL-SYNTAX is
+    pr STRING .
+    --- Formulas and sets of formulas
+    sorts PLFormula SPLFormula .
+    subsort PLFormula < SPLFormula .
+    
+    ops A B C False True : -> PLFormula [ctor] .
+    op _to_ : PLFormula PLFormula -> PLFormula [ctor prec 50] .
+    op _sim_ : PLFormula PLFormula -> PLFormula [ctor prec 55] .
+    op _land_ : PLFormula PLFormula -> PLFormula [ctor prec 30] .
+    op _lor_ : PLFormula PLFormula -> PLFormula [ctor prec 30] .
+    op neg_ : PLFormula -> PLFormula [ctor prec 20] .
+    op nil : -> SPLFormula [ctor] .
+    op _,_ : SPLFormula SPLFormula -> SPLFormula [ctor assoc id: nil prec 70] .
+    
+    --- Sequents
+    sort PLSeq .
+    op _vdash_ : SPLFormula PLFormula -> PLSeq [ctor prec 90 ] .
+
+    ---------------------
+    vars F F' G : PLFormula .
+    var L : SPLFormula .
+    ---------------------
+    
+    --- To Latex
+    op toTex : PLFormula -> String .
+    eq toTex(A) = "A" .
+    eq toTex(B) = "B" .
+    eq toTex(C) = "C" .
+    eq toTex(False) = "\\LJFalse" .
+    eq toTex(True) = "\\LJTrue" .
+    eq toTex(F to G) = toTex(F) + " \\LJimp " + toTex(G) .
+    eq toTex(F sim G) = "(" +  toTex(F) + ") \\LJiff (" + toTex(G) + ")" .
+    eq toTex(F land G) = toTex(F) + " \\LJand " + toTex(G) .
+    eq toTex(F lor G) = toTex(F) + " \\LJor " + toTex(G) .
+    eq toTex( neg F) = " \\LJneg " + toTex(F) .
+    op toTexL : SPLFormula -> String .
+    eq toTexL(nil) = " \\LLempty " .
+    eq toTexL((F , L)) = toTex(F) + ( if L == nil then " " else " , " + toTexL(L) fi ) .
+    op toTex : PLSeq -> String .
+    eq toTex(L vdash F) = "\\LJSec{" + toTexL(L) + "}{" + toTex(F) + "}" .
+endfm
+

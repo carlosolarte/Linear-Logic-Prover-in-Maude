@@ -1,0 +1,347 @@
+***(
+  LJ System 
+  author: Carlos Olarte
+  file: LJ-prover.maude
+  *)  
+    
+
+--- ===================
+--- SYNTAX
+--- ===================
+
+load meta-level-ext.maude .
+fmod LJ-FORMULA is
+    pr META-LEVEL-EXT .
+    sort Formula .
+
+    --- Atoms
+    sort Atom .
+    subsort Qid < Atom < Formula .
+
+    --- Some atoms
+    ops a b c p q r s : -> Atom .
+    eq a = 'a . eq b = 'b . eq c = 'c .
+    eq p = 'p . eq q = 'q . eq r = 's . eq s = 's .
+
+    --- units
+    op 1 : -> Formula [ctor] .
+    op 0 : -> Formula [ctor] .
+
+    --- Connectives
+    op _&_ : Formula Formula -> Formula [ctor prec 30] . *** conjunction
+    op _o_ : Formula Formula -> Formula [ctor prec 30] . *** disjunction
+    op _-->_ : Formula Formula -> Formula [prec 35] . *** implication
+    op _<-->_ : Formula Formula -> Formula [prec 35] . *** BIimplication (just a shorthand)
+    op ~_ : Formula -> Formula  . *** negation (just a shorthand)
+    eq ~ F:Formula = F:Formula --> 0 .
+    eq F:Formula <--> G:Formula = (F:Formula --> G:Formula) & (G:Formula --> F:Formula) .
+
+    ---------------------
+    vars F F' G : Formula .
+    var A : Atom .
+    ---------------------
+    
+    --- To Latex
+    op toTex : Formula -> String .
+    eq toTex(Q:Qid) = string(Q:Qid) .
+    eq toTex(1) = "\\LJTrue" .
+    eq toTex(0) = "\\LJFalse" .
+    eq toTex(F & G) = toTex(F) + " \\LJand " + toTex(G) .
+    eq toTex(F o G) = toTex(F) + " \\LJor " + toTex(G) .
+    eq toTex(F --> G) = toTex(F) + " \\LJimp " + toTex(G) .
+endfm
+
+--- ===================
+--- SETS OF FORMULAS
+--- ===================
+
+fmod LJ-SET-FORMULA  is
+    pr LJ-FORMULA .
+
+    --- Sets
+    sort SFormula .
+    subsort Formula  < SFormula .
+    
+    --- Empty set/mset
+    op emp : -> SFormula .
+
+    --- Sets are build with ;
+    op _;_ : SFormula SFormula -> SFormula [ctor assoc comm id: emp] .
+    eq F:Formula ; F:Formula = F:Formula . *** idempotency
+
+    --- to Latex
+    op toTexS : SFormula -> String .
+    eq toTexS(emp) = " \\LLempty " .
+    eq toTexS(F:Formula ; S:SFormula) = toTex(F:Formula) +
+	( if S:SFormula == emp then " " else " , " + toTexS(S:SFormula) fi ) .
+endfm
+
+--------------
+--- Sequents
+--------------
+fmod LJ-SEQUENT is 
+    pr  LJ-SET-FORMULA .
+
+    ------------------------
+    vars CC S : SFormula .
+    vars F G : Formula .
+    var R : Qid .
+    var Sq : Sequent .
+    var LSq : LSequent .
+    var Q : Qid .
+    var LTr : LTree .
+    var Tr : Tree .
+    vars L L'  : LSequent .
+    ------------------------
+
+    --- Sequents
+    sort Sequent .
+    op _|-_ : SFormula Formula  -> Sequent [prec 60] . --- after negative phase
+    op _|~_ : SFormula Formula  -> Sequent [prec 60] . --- negative phase
+    op _|~i~_ : SFormula Formula  -> Sequent [prec 60] . --- initial sequent
+    op seq : SFormula Formula -> Sequent [ctor] . --- sequent used in proof terms
+    op proved : Qid SFormula Formula  -> Sequent [ctor] .    --- Proved sequent
+    op error : -> Sequent [ctor] . --- For the meta-level
+
+     --- Lists and sets of sequents
+    sorts LSequent SSequent .  --- sets of sequents
+    subsort Sequent < LSequent SSequent .
+
+    op none : -> LSequent . --- empty list
+    op empty : -> SSequent . --- empty set
+
+	--- Building lists and sets of sequents
+    op _|_ : LSequent LSequent -> LSequent [ctor assoc id: none prec 70 frozen] .
+    op _,_ : SSequent SSequent -> SSequent [ctor assoc comm id: empty prec 70 frozen] .
+    eq Sq, Sq = Sq . *** idempotency
+
+    --- From sequents to seq-sequents
+    op toSeq : Sequent -> Sequent .
+    op toSeqL : LSequent -> LSequent .
+    eq toSeq(CC |~i~ F) = seq(CC,  F) .
+    eq toSeq(CC |~ F) = seq(CC,  F) .
+    eq toSeq(CC |- F) = seq(CC, F) .
+    eq toSeq(seq(CC ,F)) = seq(CC, F) .
+
+    --- Transforming a list of |~ sequents into a list of |- sequents
+    op readySeq : LSequent -> LSequent .
+    op readySeq$ : Sequent -> Sequent .
+    eq readySeq(none) = none .
+    eq readySeq(Sq | L) = readySeq$(Sq) | readySeq(L) .
+    eq readySeq$(CC |~ F) = (CC |- F) .
+    eq readySeq$(Sq) = Sq [owise] .
+    
+    eq toSeqL(none) = none .
+    eq toSeqL(Sq | LSq) = toSeq(Sq) | toSeqL(LSq) .
+
+    --- Configurations
+    sort Conf .
+    --- The first argument avoid loops (due to implication left)
+    op {_;_;_} : SSequent LSequent ProofTerm -> Conf [ctor] .
+    op proved : ProofTerm -> Conf [ctor] . --- All the goals were proved
+    op error : -> Conf [ctor] . --- for the meta-level
+    
+    --- Building a proof term step: given a sequent (the conclusion),
+    --- the list of premisses and the name of the rule, it returns the
+    --- needed proof term element
+    op makePT : Sequent LSequent Qid -> ProofTermElem .
+    eq makePT(Sq, LSq, Q) = step(toSeq(Sq), toSeqL(LSq), Q) .
+
+    
+    --- TeX
+    op toTex : Sequent -> String .
+    op toTexL : LSequent -> String .
+    eq toTex(error) = "failed" .
+    eq toTex(S |~ F) = "\\LJSec{" + toTexS(S) + "}{" + toTex(F) + "}" .
+    eq toTex(S |~i~ F) = "\\LJSec{" + toTexS(S) + "}{" + toTex(F) + "}" .
+    eq toTex(S |- F) = "\\LJSec{" + toTexS(S) + "}{" + toTex(F) + "}" .
+    eq toTex(seq(S , F)) = "\\LJSec{" + toTexS(S) + "}{" + toTex(F) + "}" .
+    eq toTex(proved(R, S, F)) = "\\infer[" + string(R) + "]{" + "\\LJSec{" + toTexS(S) + "}{" + toTex(F) + "}" + "}{}" .
+    eq toTexL(none) = " " .
+    eq toTexL(Sq | LSq ) = toTex(Sq) + ( if  LSq == none then " " else " & " + toTexL(LSq) fi ) .
+
+
+    --- Proof Terms
+    --- proof term elements: conclusion, premisses and name of the rule
+    sort ProofTermElem .
+    --- Proof terms: sequents of atomic proof terms
+    sort ProofTerm .
+    subsort ProofTermElem < ProofTerm .
+    
+    op step : Sequent LSequent Qid -> ProofTermElem [ctor frozen] . 
+    op errPT : -> ProofTerm [ctor] .
+    op none : -> ProofTerm [ctor] .
+    op _._ : ProofTerm ProofTerm -> ProofTerm [ctor assoc id: none] .
+
+    --- Derivations trees
+    sorts Leaf Tree LTree .
+    subsort Leaf < Tree < LTree .
+
+    op l : Sequent -> Leaf [ctor] . --- a leaf
+    op t : Sequent LTree Qid  -> Tree . --- a node (Qid is the name of the rule applied)
+    op errtree : -> Tree [ctor] . --- for the meta-level
+    op failtree : -> Tree [ctor] . --- Failed tree
+    op _::_ : LTree LTree -> LTree [ctor assoc id: epsilon] . --- List of children
+    op epsilon : -> LTree  [ctor] . --- the empty list of trees
+
+    --- From sequents to trees
+    op toTree$ : Sequent -> Tree .
+    eq toTree$(Sq) = l(Sq) .
+    op toTree : LSequent -> LTree .
+    eq toTree(none) = epsilon .
+    eq toTree(Sq | LSq) = toTree$(Sq) :: toTree(LSq) .
+
+    --- TEX
+    op toTex : Tree -> String .
+    op toTexL : LTree -> String .
+    eq toTex(l(Sq)) = "\\infer{" + toTex(Sq)+ "}{}" .
+    eq toTex(failtree) = "fail" .
+    eq toTex(t(Sq, LTr, Q)) = "\\infer[\\" + string(Q)+ "]{" + toTex(Sq)+ "}{" + toTexL(LTr) + "}" .
+    eq toTex(error) = "failed" .
+    
+    eq toTexL(epsilon) = " " .
+    eq toTexL(Tr :: LTr ) = toTex(Tr) + ( if  LTr == epsilon then " " else " & " + toTexL(LTr) fi ) .
+endfm
+    
+-----------------------------------------
+--- Equations defining the negative phase
+--- (invertible rules)
+-----------------------------------------
+fmod LJ-EQ is
+    pr LJ-SEQUENT .
+
+    ----------------------
+    var CC : SFormula .
+    vars F F' G G' : Formula .
+    var A : Atom .
+    ----------------------
+    
+    --- Rules of the negative phase
+    eq CC ; A |~ A = none .
+    eq CC ; 1 |~ G = CC |~ G . --- ONEL
+    eq CC ; 0 |~ G = none . --- ZeroL
+    eq CC |~ 1 = none . --- One R
+    eq  CC |~ G --> G' = CC ; G |~ G' . --- implR
+    eq CC ; F & F' |~ G = CC ; F ; F' |~ G . --- conj Left
+    eq CC |~ G & G' = ( CC |~ G)  | (CC |~ G') . --- conj Right
+    eq CC ; F o F' |~ G = (CC ; F |~ G) | (CC ;  F' |~ G) . --- disj left
+
+endfm
+
+-------------------------------------
+--- Rules defining the positive phase
+-------------------------------------
+mod LJ-RL is
+    pr LJ-EQ .
+
+    -------------------------
+    var CC : SFormula . 
+    vars F F' G G' : Formula .
+    vars A A' : Atom .
+    vars L L'  : LSequent .
+    vars S S' T T' Sq : Sequent .
+    vars n m : Nat .
+    vars SS SS' : SSequent .
+    vars Tr Tr' : ProofTerm .
+    ----------------------------
+
+    --- Test if a sequent is provable by applying init
+    op isInit : Sequent -> Bool .
+    eq isInit( (A ; CC |- A)) = true .
+    eq isInit( (A ; CC |~ A)) = true .
+    eq isInit(Sq) = false [owise] .
+    
+
+    --- Handling the negative phase (via metaReduce in the equational module)
+    op negPhase : SFormula Formula -> LSequent .
+    eq negPhase(CC, G) = readySeq(downTerm(redIn('LJ-EQ, upTerm(CC |~ G)), error)) .
+
+    
+    --- Negative phase
+    crl [Rneg] : {SS ;  (CC |~i~ G) | L ; Tr } =>  {SS ;  L' | L ; Tr . Tr'  }  
+      if L' := negPhase(CC, G) /\ Tr' := if L' == ( CC |- G) then none else makePT(( CC |~i~ G), L', 'Rneg) fi .
+
+      --- ending the proof
+    rl [endP] : { SS ; none ; Tr } => proved(Tr) .
+
+    --- Implication left
+    crl [Limp] : { SS ;  (CC ; F --> F' |- G)  | L ; Tr } =>
+	{ SS' ; (CC ; F --> F' |~i~ F) | (CC ; F' |~i~ G) | L ; Tr . makePT((CC ; F --> F' |- G) ,((CC ; F --> F' |~i~ F) | (CC ; F' |~i~ G)), 'Limp) } 
+      if not isInit( CC |- G) /\
+	  SS' := SS , toSeq(CC ; F --> F' |~i~ G)  /\ SS =/=  SS' . --- Avoiding loops using the same implication 
+
+	  --- Disjunction
+    rl [DA] : { SS ;  (CC |- G o G') | L ; Tr } => { SS ; (CC |~i~ G) | L ; Tr . makePT((CC |- G o G'), (CC |~i~ G), 'DA) } .
+    rl [DB] : { SS ; (CC |- G o G') | L ; Tr} => { SS ;  (CC |~i~ G') | L ; Tr . makePT((CC |- G o G'), (CC |~i~ G'), 'DB) } .
+endm
+
+------------------------------------
+--- Facilities: printing
+------------------------------------
+
+mod  LJ-PROVER is
+    pr LJ-RL .
+    ----------------------------
+    var SS : SSequent .
+    vars sq sq1 sq2 : Sequent .
+    vars L LSq : LSequent .
+    vars Tr  : ProofTerm .
+    vars T T' : Tree .
+    var Q : Qid .
+    var RT : ResultTriple? .
+    ----------------------------
+
+    --- Test if a sequent is provable
+    op provable? : Conf -> ResultTriple? .
+    eq provable?({ SS ; sq1 ; Tr}) = metaSearch( [['LJ-PROVER]], upTerm({ SS ; sq1 ; Tr}), 'proved['Trx:ProofTerm], nil, '*, unbounded, 0 ) .
+
+    --- Extracting the proof term from a substitution
+    op getProofTerm : Assignment -> ProofTerm .
+    eq getProofTerm('Trx:ProofTerm <- T:Term) = downTerm(T:Term, errPT) .
+    
+    --- Update a leaf l(sq) with a tree l(sq ; list of sequents)
+    op update : Tree Sequent LSequent Qid -> Tree .
+    eq update(T , sq, LSq, Q) = downTerm(rewIn(newModule(upTerm(l(sq)),upTerm(t(sq , toTree(LSq), Q)) , 'LJ-RL) , upTerm(T)), errtree) .
+
+    --- Given a tree, it applies all the transformation described by
+    --- the proof term
+    op transform : Tree ProofTerm -> Tree .
+    op transform$ : Tree ProofTermElem -> Tree .
+    eq transform$(T, step(sq, L, Q)) = update(T, sq, L, Q) .
+    eq transform(T, none) = T .
+    eq transform(T, (Pt:ProofTermElem . PtL:ProofTerm)) = transform(transform$(T, Pt:ProofTermElem), PtL:ProofTerm) .
+
+    --- Initial Goals
+    op buildTree : Sequent -> Tree .
+    ceq buildTree(sq) = T
+      if RT := provable?({ empty ; sq ; none}) /\ T := if RT == failure then failtree else transform(l(toSeq(sq)), getProofTerm(getSubstitution(RT))) fi .
+    
+    op solve : Sequent -> String .
+    eq solve(Sq:Sequent) =  toTex(buildTree(Sq:Sequent)) .
+
+    --- We assume that Sq is a sequent of the shape |~i~
+    op prove : Sequent -> Conf .
+    eq prove(Sq:Sequent) = {empty ; Sq:Sequent ; none } .
+    op prove : Formula -> Conf .
+    eq prove(F:Formula) = { empty ; ( emp |~i~ F:Formula) ; none} .
+
+    --- Proving assuming some axioms
+    op proveAx : SFormula Formula -> Conf .
+    eq proveAx(LF:SFormula, F:Formula) = {empty ; ( LF:SFormula |~i~ F:Formula)  ; none } .
+endm
+      
+eof
+
+--- Some tests
+
+--- Searching for a solution
+search [1] prove( ('A ; 'A --> 'B |~i~ 'A & 'B) ) =>* proved(Tr) .
+--- Searching for a solution and building the tree
+red buildTree(('A ; 'A --> 'B |~i~ 'A & 'B)) .
+--- Generating latex code
+red solve (('A ; 'A --> 'B |~i~ 'A & 'B))  .
+
+search [1] prove (p --> q |~i~ r) =>* proved(Tr) . --- loop
+search [1] prove( (emp |~i~ (~ p --> q) --> ~ ~ (p o q))) =>* proved(Tr) .
+search [1] prove((emp |~i~  ~  ~ ('A <--> 'B)  <-->  ~ ~ ('A --> 'B)  &  ~ ~ ('B --> 'A))) =>* proved(Tr) .
+    

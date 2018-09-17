@@ -1,0 +1,410 @@
+***(
+  Focused system for Intuitionistic Linear Logic 
+  author: Carlos Olarte
+  file: ill-system.maude
+  
+  Sequents  have one of the following shape
+  (1) unfocus: [ Gamma ] Delta |~ G
+  The equational theory defined in the module ILL-EQ applies all the
+  connectives belonging to the negative phase (in any order)
+  Initial goals must use sequents of this shape (in order to guarantee
+    that the derivations starts with a negative phase)
+  ------------------------------------------------------------------
+  (2) Focus on the right [ Gamma ] Delta ==> G
+  G is decomposed until a negative formula is found and the sequent is
+  reduced to a sequent of the shape (1)
+  ------------------------------------------------------------------
+  (3) Focus on the left [ Gamma ] Delta < F > <== G
+  F is decomposed until a positive formula is found and the sequent is
+  reduced to a sequent of the shape (1)
+  ------------------------------------------------------------------
+  (4) End of the positive phase [Gamma ] Delta |- G
+  Sequents of this shape signals that the negative phase ended and a
+  decision rule (on the right, on the linear or in the classical
+  context) must be applied
+  ------------------------------------------------------------------
+
+  A configuration takes the form { n ; L ;PT } where L is a list of unproved
+  sequents and PT is a proof term
+
+  Initial goals take the form prove(S) where S is a sequent
+  or prove(F) where F is a formula In these cases, the default limit
+  LIMIT --unbounded-- is used
+  Suitable alternatives allows for defining a different
+  limit, eg prove(n, F) where "n" is the maximum number of times the copy
+  rule (decision on the classical context) can be applied.
+  Using "unbounded" means that the
+  prover is complete but it may take a long time to find a proof
+
+  Definition of the rules (positive phase) are in the module
+  ILL-RL. Definitions for the negative phase are in the functional
+  module ILL-EQ
+
+  Module  ILL-PROVER offers facilities to build a proof tree using the
+  meta-level and then, it generates LaTeX code
+
+  For printing(generating latex code), the initial goal is solve(S)
+  where S is a sequent (of the shape |~)
+  ***)
+
+    
+load syntax .
+
+--------------
+--- Sequents
+--------------
+fmod ILL-SEQUENT-SYNTAX is
+    
+    sort Sequent .
+    pr  MSET-FORMULA .
+
+    --- Negative phase Sequent
+    op [_]_|-_ : SFormula MSFormula Formula  -> Sequent [ctor prec 60] .
+    --- Sequent needing the negative phase
+    op [_]_|~_ : SFormula MSFormula Formula  -> Sequent [ctor prec 60] .
+    --- Focused on the right
+    op [_]_ ==> _ : SFormula MSFormula Formula  -> Sequent [ctor prec 60] .
+    --- Focused on the right
+    op [_]_ <_> <== _  : SFormula MSFormula Formula Formula  -> Sequent [ctor prec 60] .
+    --- Terms used to describe proof terms (the phase of the proof is irrelevant)
+    op seq : SFormula MSFormula Formula -> Sequent [ctor] .
+    --- Error for the meta-level
+    op error : -> Sequent [ctor] .
+
+    --- List of sequents
+    sort LSequent .
+    subsort Sequent < LSequent .
+    --- Empty list os sequents
+    op none : -> LSequent .
+    --- Building lists of sequents
+    op _|_ : LSequent LSequent -> LSequent [ctor assoc id: none prec 70 frozen ] .
+    
+    ---------------------------------------
+    var CC : SFormula .
+    var L : MSFormula .
+    vars F G : Formula .
+    var LSq : LSequent .
+    var Sq : Sequent .
+    ---------------------------------------
+
+    --- From sequents to seq-sequents
+    op toSeq : Sequent -> Sequent .
+    op toSeqL : LSequent -> LSequent .
+
+    eq toSeq([CC] L |- F) = seq(CC, L, F) .
+    eq toSeq([CC] L |~ F) = seq(CC, L, F) .
+    eq toSeq([CC] L ==> F) = seq(CC, L, F) .
+    eq toSeq([CC] L < G > <== F:Formula) = seq(CC, (L, G),  F) .
+    
+    eq toSeqL(none) = none .
+    eq toSeqL(Sq | LSq) = toSeq(Sq) | toSeqL(LSq) .
+
+    --- Transforming a list of |~ sequents into a list of |- sequents
+    op readySeq : LSequent -> LSequent .
+    op readySeq$ : Sequent -> Sequent .
+    eq readySeq(none) = none .
+    eq readySeq(Sq | LSq) = readySeq$(Sq) | readySeq(LSq) .
+    eq readySeq$(([CC] L |~ F)) = ([CC] L |- F) .
+    eq readySeq$(Sq) = Sq [owise] .
+    
+    --- TEX
+    op toTex : Sequent -> String .
+    op toTexL : LSequent -> String .
+
+    eq toTex([CC] L |~ F) = "\\LLSec{" + toTexS(CC) + "}{" + toTexMS(L) + "}{" + toTex(F) + "}" .
+    eq toTex([CC] L |- F) = "\\LLSec{" + toTexS(CC) + "}{" + toTexMS(L) + "}{" + toTex(F) + "}" .
+    eq toTex([CC] L ==> F) = "\\LLSecR{" + toTexS(CC) + "}{" + toTexMS(L) + "}{" + toTex(F) + "}" .
+    eq toTex([CC] L < F > <== G) = "\\LLSecL{" + toTexS(CC) + "}{" + toTexMS(L) + "}{" + toTex(F) + "}{" + toTex(G) + "}" .
+    eq toTex(seq(CC, L, G)) = toTex([CC] L |- G) .
+
+    eq toTexL(none) = " " .
+    eq toTexL(Sq | LSq ) = toTex(Sq) + ( if  LSq == none then " " else " & " + toTexL(LSq) fi ) .
+endfm
+
+------------------------------------
+--- Proof Terms and Derivation Trees
+------------------------------------
+fmod ILL-DERIVATION-TREE is
+    pr ILL-SEQUENT-SYNTAX .
+
+    --- proof term elements: conclusion, premisses and name of the rule
+    sort ProofTermElem .
+    --- Proof terms: sequents of atomic proof terms
+    sort ProofTerm .
+    subsort ProofTermElem < ProofTerm .
+    
+    op step : Sequent LSequent Qid -> ProofTermElem [ctor frozen] . 
+    op errPT : -> ProofTerm [ctor] .
+    op none : -> ProofTerm [ctor] .
+    op _._ : ProofTerm ProofTerm -> ProofTerm [ctor assoc id: none] .
+
+    --- Derivations trees
+    sorts Leaf Tree LTree .
+    subsort Leaf < Tree < LTree .
+    --- Error tree for the meta-level
+    op errtree : -> Tree [ctor] .
+    --- Failed tree
+    op failtree : -> Tree [ctor] .
+    --- List of children
+    op _::_ : LTree LTree -> LTree [ctor assoc id: epsilon] .
+    --- the empty list of trees
+    op epsilon : -> LTree  [ctor] .
+    --- a leaf
+    op l : Sequent -> Leaf [ctor] .
+    --- a node (Qid is the name of the rule applied)
+    op t : Sequent LTree Qid  -> Tree .
+
+    
+    -------------------------
+    var Sq : Sequent .
+    var LSq : LSequent .
+    var Tr : Tree .
+    var LTr : LTree .
+    var Q : Qid .
+    -------------------------
+
+    --- From sequents to trees
+    op toTree$ : Sequent -> Tree .
+    eq toTree$(Sq) = l(Sq) .
+    op toTree : LSequent -> LTree .
+    eq toTree(none) = epsilon .
+    eq toTree(Sq | LSq) = toTree$(Sq) :: toTree(LSq) .
+
+    
+    --- Configurations
+    sort Conf .
+    --- The first argument is the limit for the use of the DecideC rule (copy from the classical context )
+    op {_;_;_} : Bound LSequent ProofTerm -> Conf [ctor] .
+    --- All the goals were proved
+    op proved : ProofTerm -> Conf [ctor] .
+    --- Error for the meta-level
+    op error : -> Conf [ctor] .
+
+    --- Building a proof term step: given a sequent (the conclusion),
+    --- the list of premisses and the name of the rule, it returns the
+    --- needed proof term element
+    op makePT : Sequent LSequent Qid -> ProofTermElem .
+    eq makePT(Sq, LSq, Q) = step(toSeq(Sq), toSeqL(LSq), Q) .
+
+    
+    --- TEX
+    op toTex : Tree -> String .
+    op toTexL : LTree -> String .
+    eq toTex(l(Sq)) = "\\infer{" + toTex(Sq)+ "}{}" .
+    eq toTex(failtree) = "fail" .
+    eq toTex(t(Sq, LTr, Q)) = "\\infer[\\" + string(Q)+ "]{" + toTex(Sq)+ "}{" + toTexL(LTr) + "}" .
+    eq toTex(error) = "failed" .
+    
+    eq toTexL(epsilon) = " " .
+    eq toTexL(Tr :: LTr ) = toTex(Tr) + ( if  LTr == epsilon then " " else " & " + toTexL(LTr) fi ) .
+endfm
+
+
+-----------------------------------------
+--- Equations defining the negative phase
+-----------------------------------------
+fmod ILL-EQ is
+    pr ILL-SEQUENT-SYNTAX .
+
+    -----------------------------------------------
+    vars CC CC' : SFormula . --- classical contexts
+    vars CL CL' : MSFormula . --- linear contexts
+    vars F F' G G' : Formula .
+    vars A A' : Atom .
+    vars L L1 L2 : LSequent .
+    var Sq : Sequent .
+    -----------------------------------------------
+    
+    --- Rules of the negative phase
+    eq [CC] CL , 1 |~ G = [CC] CL |~ G . --- ONEL
+    eq [CC] CL, 0 |~ G = none . --- ZERO
+    eq [CC] CL |~ top = none  . --- TOP
+    eq [CC] CL |~ G -o G' = [CC] CL, G |~ G' . --- implR
+    eq [CC] CL, F * F' |~ G = [CC] CL, F , F' |~ G . --- tensorL
+    eq [CC] CL |~ G & G' = ([CC] CL |~ G)  | ([CC] CL |~ G') . --- withR
+    eq [CC] CL, F o F' |~ G = ([CC] CL, F |~ G) | ([CC] CL, F' |~ G) . --- plusL
+    eq [CC] CL, ! F |~ G = [CC ; F] CL |~ G . --- bangL
+	
+	--- some simplifications (due to LL equivalence)
+    eq [CC ; F & F'] CL |~ G =  [CC ; F ; F'] CL |~ G . --- !(F& F') == !F * ! F'
+    eq [CC ; 0] CL |~ G =  none . --- !0 |-- 0
+    eq [CC ; ! F] CL |~ G =  [CC ; F] CL |~ G . --- !!F == !F
+    eq [CC ; 1] CL |~ G =  [CC] CL |~ G . --- !1 == 1
+    ceq [CC ; F ; F -o F'] CL |~ G =  [CC ; F ; F -o F' ; F'] CL |~ G if (CC ; F ; F -o F') =/= (CC ; F ; F -o F' ; F') . --- modus-ponens classical context
+endfm
+
+-------------------------------------
+--- Rules defining the positive phase
+-------------------------------------
+mod ILL-RL is
+    pr  ILL-DERIVATION-TREE .
+
+    -----------------------------------------------
+    vars CC CC' : SFormula . *** classical contexts
+    vars CL CL' : MSFormula . *** linear contexts
+    vars F F' G G' : Formula .
+    vars A A' : Atom .
+    vars L L'  : LSequent .
+    var Sq : Sequent .
+    vars n m : Nat .
+    var bnd : Bound .
+    vars Tr Tr' : ProofTerm .
+    -----------------------------------------------
+   
+
+    --- Handling the negative phase (via metaReduce in the equational module)
+    op negPhase : Sequent -> LSequent .
+    eq negPhase(Sq) = readySeq(downTerm(redIn('ILL-EQ, upTerm(Sq)), error)) .
+    
+
+    --- Test if a sequent is provable by applying init
+    op isInit : Sequent -> Bool .
+    eq isInit( [CC] A |- A) = true .
+    eq isInit([CC ; A] empMS |- A ) = true .
+    eq isInit(Sq) = false [owise] .
+
+
+    --- Negative phase (The proof term is added only if the negative
+    --- phase generated a different goal)
+    crl [Rneg] : { bnd ; ([CC] CL |~ G) ; Tr} => { bnd ; L ; Tr . Tr' }
+	if L := negPhase([CC] CL |~ G) /\ Tr' := if L == ([CC] CL |- G) then none else makePT(([CC] CL |~ G), L, 'Rneg) fi .
+
+      --- None
+    rl [none] : { bnd ; none  ; Tr} => proved(Tr) .
+
+    --- One (No proof term is generated)
+    rl [Rone] : { bnd ; ([CC] empMS ==> 1)  ; Tr} => proved(Tr) .
+
+    --- Init (No proof term is generated)
+    rl [Rinit] : { bnd ; ([CC] A ==> A)  ; Tr} => proved(Tr) .
+    rl [RinitC] : { bnd ; ([CC ; A] empMS ==> A) ; Tr} => proved(Tr) .
+
+    --- BOT
+    rl [Rbot] : { bnd ; ([CC] empMS < bot > <== bot) ; Tr} => proved(Tr)  .
+
+    --- Tensor
+    rl [Rtensor] : { bnd ;([CC] CL, CL' ==> G * G') ; Tr} =>
+	{ bnd ;([CC] CL ==> G) | ([CC] CL' ==> G') ; Tr . makePT(([CC] CL, CL' ==> G * G'),(([CC] CL ==> G) | ([CC] CL' ==> G')),'Rtensor) } .
+
+    --- Oplus
+    rl [RplusA] : { bnd ; ([CC] CL ==> G o G') ; Tr} =>
+	{ bnd ; ([CC] CL ==> G) ; Tr . makePT(([CC] CL ==> G o G'),([CC] CL ==> G),'RplusA)} .
+    rl [RplusB] : { bnd ; ([CC] CL ==> G o G') ; Tr} =>
+	{ bnd ; ([CC] CL ==> G') ; Tr . makePT(([CC] CL ==> G o G'),([CC] CL ==> G'),'RplusB)} .
+
+    --- Implication left
+    rl [RLimp] : { bnd ; ([CC] CL, CL' < F -o F' > <== G) ; Tr} =>
+	{ bnd ; ([CC] CL ==> F) | ([CC] CL' < F' > <== G) ; Tr . makePT(([CC] CL, CL' < F -o F' > <== G), (([CC] CL ==> F) | ([CC] CL' < F' > <== G)),'RLimp)} .
+
+    --- With L
+    rl [RwithA] : { bnd ;([CC] CL < F & F' > <== G) ; Tr} => { bnd ; ([CC] CL < F > <== G) ; Tr . makePT(([CC] CL < F & F' > <== G),([CC] CL < F > <== G), 'RwithA) } .
+    rl [RwithB] : { bnd ;([CC] CL < F & F' > <== G) ; Tr} => { bnd ; ([CC] CL < F' > <== G) ; Tr . makePT(([CC] CL < F & F' > <== G),([CC] CL < F' > <== G), 'RwithB) } .
+
+    --- BangL
+    rl [Rbang] : { bnd ; ([CC] empMS ==> ! G) ; Tr} => { bnd ; ([CC] empMS |~ G) ; Tr . makePT(([CC] empMS ==> ! G),([CC] empMS |~ G), 'Rbang)} .
+    
+    --- Deciding 
+    --- Linear context (No proof term is generated since the (flat) sequent remains the same)
+    crl [RdecideL] : { bnd ; ([CC] CL, F |- G) ; Tr} => { bnd ; ( [CC] CL < F > <== G) ; Tr} if not isAtom(F) .
+
+      --- Copy rule
+    crl [RdecideC] : { n ; ([CC ; F] CL |- G) ; Tr} =>
+	{ dec(n) ; ( [CC ; F] CL < F > <== G) ; Tr . makePT(([CC ; F] CL |- G),( [CC ; F] CL < F > <== G),'RdecideC) }
+      if gteq(n, 1) and-then not isAtom(F) and-then not isInit ([CC ; F] CL |- G) .
+
+    --- Right formula (No proof term is generated since the (flat) sequent remains the same)
+    rl [RdecideR] : { bnd ; ([CC] CL |- G) ; Tr} => { bnd ; ([CC] CL ==> G) ; Tr} .
+
+    --- Release (No proof term is generated since the (flat) sequent remains the same)
+    crl [RreleaseL] : { bnd ; ([CC] CL < F > <== G) ; Tr} => { bnd ; ( [CC] CL, F |~ G) ; Tr} if releaseL(F) .
+    crl [RreleaseR] : { bnd ; ([CC] CL ==> G) ; Tr} => { bnd ; ( [CC] CL |~ G) ; Tr} if releaseR(G) .
+endm
+
+------------------------------------
+--- Facilities to proof ILL sequents
+------------------------------------
+    
+mod  ILL-PROVER is
+    pr ILL-RL .
+
+    --- LIMIT for the copy rule
+    --- Default value: unbounded
+    op LIMIT : -> Bound .
+    eq LIMIT = unbounded .
+
+    ----------------------------
+    var bnd : Bound .
+    vars sq sq1 sq2 : Sequent .
+    vars L LSq : LSequent .
+    vars Tr  : ProofTerm .
+    vars T T' : Tree .
+    var Q : Qid .
+    var RT : ResultTriple? .
+    ----------------------------
+
+    --- Don't prove twice the same sequent
+    eq { bnd ; L1:LSequent | sq1 | L2:LSequent | sq1 | L3:LSequent ; Tr} =
+	{ bnd ; L1:LSequent | sq1 | L2:LSequent | L3:LSequent ; Tr} .
+
+    --- Test if a sequent is provable
+    op provable? : Conf -> ResultTriple? [memo] .
+    eq provable?({ bnd ; sq1 ; Tr}) = metaSearch( [['ILL-PROVER]], upTerm({ bnd ; sq1 ; Tr}), 'proved['Trx:ProofTerm], nil, '*, unbounded, 0 ) .
+
+    --- Extracting the proof term from a substitution
+    op getProofTerm : Assignment -> ProofTerm .
+    eq getProofTerm('Trx:ProofTerm <- T:Term) = downTerm(T:Term, errPT) .
+    
+    --- Dealing with several goals
+    crl [step] : { bnd ; sq1 | sq2 | L ; Tr } =>
+	{bnd ; sq2 | L ; Tr . getProofTerm(getSubstitution(RT)) }
+      if sq1 =/= sq2 /\ RT := provable? ({ bnd ; sq1 ; none }) /\ RT =/= failure .
+      
+      --- Update a leaf l(sq) with a tree l(sq ; list of sequents)
+    op update : Tree Sequent LSequent Qid -> Tree .
+    eq update(T , sq, LSq, Q) = downTerm(rewIn(newModule(upTerm(l(sq)),upTerm(t(sq , toTree(LSq), Q))) , upTerm(T)), errtree) .
+
+    --- Given a tree, it applies all the transformation described by
+    --- the proof term
+    op transform : Tree ProofTerm -> Tree .
+    op transform$ : Tree ProofTermElem -> Tree .
+    eq transform$(T, step(sq, L, Q)) = update(T, sq, L, Q) .
+    eq transform(T, none) = T .
+    eq transform(T, (Pt:ProofTermElem . PtL:ProofTerm)) = transform(transform$(T, Pt:ProofTermElem), PtL:ProofTerm) .
+
+    --- Initial Goals
+    op buildTree : Bound Sequent -> Tree .
+    ceq buildTree(bnd , sq) = T
+      if RT := provable?({ bnd ; sq ; none}) /\ T := if RT == failure then failtree else transform(l(toSeq(sq)), getProofTerm(getSubstitution(RT))) fi .
+    
+    op solve : Sequent -> String .
+    op solve : Nat Sequent -> String .
+    eq solve(Sq:Sequent) =  toTex(buildTree(unbounded, Sq:Sequent)) .
+    eq solve(n:Nat, Sq:Sequent) =  toTex(buildTree(n:Nat, Sq:Sequent)) .
+
+    --- We assume that Sq is a sequent of the shape |~
+    op prove : Sequent -> Conf .
+    op prove : Bound Sequent -> Conf .
+    eq prove(Sq:Sequent) = {LIMIT ; Sq:Sequent ; none } .
+    eq prove(bnd, Sq:Sequent) = {bnd ; Sq:Sequent ; none} .
+    op prove : Formula -> Conf .
+    op prove : Bound Formula -> Conf .
+    eq prove(F:Formula) = { LIMIT ; ([emp] empMS |~ F:Formula) ; none} .
+    eq prove(bnd, F:Formula) = { bnd ; ([emp] empMS |~ F:Formula) ; none } .
+    --- Proving assuming some axioms
+    op proveAx : SFormula Formula -> Conf .
+    op proveAx : Bound SFormula Formula -> Conf .
+    eq proveAx(LF:SFormula, F:Formula) = {LIMIT ; ( [LF:SFormula] empMS |~ F:Formula)  ; none } .
+    eq proveAx( bnd, LF:SFormula, F:Formula) = { bnd ; ([LF:SFormula] empMS |~ F:Formula)  ; none } .
+
+    
+endm
+eof
+--- Searching for a solution
+search [1] prove(3, [emp] 'A |~ 'A * 1) =>* proved(Tr) .
+--- No limit on the copy rule
+search [1] prove([emp] 'A |~ 'A * 1) =>* proved(Tr) .
+--- Searching for a solution and building the tree
+red buildTree( 3, ([emp] 'A |~ 'A * 1)) .
+--- Generating latex code
+red solve(([emp] 'A |~ 'A * 1)) .
+red solve(4, ([emp]! ((! 'A -o 'B) & (! 'B -o 'A)),! ((! 'B -o 'C) & (! 'C -o 'B)) |~ (! 'A -o 'C) & (! 'C -o 'A))) .

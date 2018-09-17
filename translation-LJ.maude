@@ -1,0 +1,43 @@
+***(
+  Translating PL sequents into the LJ System
+  Author: Carlos Olarte
+  File: translation-LJ.maude
+  ***)
+    
+load LJ-prover .
+load PL-Theory .
+
+mod LJ-ENC  is
+    pr LJ-PROVER .
+    pr PL-SYNTAX .
+
+    vars F G : PLFormula .
+    var S : SPLFormula .
+    
+    op fromPL : PLFormula -> Formula . 
+    eq fromPL(A) = 'A . 
+    eq fromPL(B) = 'B . 
+    eq fromPL(C) = 'C . 
+    eq fromPL(False) = 0 . 
+    eq fromPL(True) = 1 . 
+    eq fromPL(F to G) =  (fromPL(F)) -->  fromPL(G) .
+    eq fromPL(F sim G) = fromPL( (F to G) land (G to F)) . --- Biimplication
+    eq fromPL(F land G) = fromPL(F) & fromPL(G) .
+    eq fromPL(F lor G) = (fromPL(F)) o (fromPL(G)) .
+    eq fromPL(neg F) = fromPL(F) --> 0 .
+    
+    op fromPL : SPLFormula -> SFormula .
+    eq fromPL(nil) = emp .
+    eq fromPL( (F , S)) = fromPL(F) ; fromPL(S) .
+
+    op fromPL : PLSeq -> Sequent .
+    eq fromPL(S vdash F) = fromPL(S) |~i~ fromPL(F) .
+
+    op proveIt : PLSeq -> String .
+    eq proveIt(Sq:PLSeq) = "$" + solve(fromPL(Sq:PLSeq)) + "$"  .
+endm
+
+eof
+--- Examples
+red proveIt( nil vdash A to A) .
+red proveIt( A land B vdash A lor A) .

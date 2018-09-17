@@ -8,7 +8,9 @@
   denote atomic propositions 
   
   Some representative literals are also defined as, e.g.,
-  p,q,r,s,t,a,b with equations of the form eq p = 'p 
+  p,q,r,s,t,a,b with equations of the form eq p = 'p
+
+  The grammar is as follows:
     
   F ::= A | A ^ | 1 | 0 | bot | top | F * F | F|F | F & F | F o F | F -o F
 
@@ -21,19 +23,20 @@
   is empMS
 ***)
 
+load meta-level-ext .
 
 --- ===================
 --- SYNTAX
 --- ===================
 fmod FORMULA is
-    pr META-LEVEL * (op _;_ to op_;;_ , op _,_ to op_C_ ) .
+    pr META-LEVEL-EXT .
     sort Formula .
 
     --- Atoms
     sort Atom .
     subsort Qid < Atom < Formula .
     op _^ : Atom -> Atom [ctor prec 10] .
-    eq ( (A:Atom ^) ^ ) = A:Atom .
+    eq ( (A:Atom ^) ^ ) = A:Atom . --- double (atomic) negation
 
     --- Some atoms
     ops a b c p q s : -> Atom .
@@ -47,10 +50,10 @@ fmod FORMULA is
     op top : -> Formula [ctor] .
 
     --- Connectives
-    op _*_ : Formula Formula -> Formula [ctor prec 25] . *** tensor
-    op _|_ : Formula Formula -> Formula [ctor prec 25] . *** par (for Classical LL)
-    op _&_ : Formula Formula -> Formula [ctor prec 30] . *** with
-    op _o_ : Formula Formula -> Formula [ctor prec 30] . *** oplus
+    op _*_ : Formula Formula -> Formula [ctor assoc prec 25] . *** tensor
+    op _|_ : Formula Formula -> Formula [ctor assoc prec 25] . *** par (for Classical LL)
+    op _&_ : Formula Formula -> Formula [ctor assoc prec 30] . *** with
+    op _o_ : Formula Formula -> Formula [ctor assoc prec 30] . *** oplus
     op _-o_ : Formula Formula -> Formula [prec 35] . *** implication for ILL
     op _o-o_ : Formula Formula -> Formula [prec 35] . *** biimplication for ILL
 
@@ -58,38 +61,36 @@ fmod FORMULA is
     op !_ : Formula -> Formula [ctor prec 20] .
     op ?_ : Formula -> Formula [ctor prec 20] .
 
-    --- Error (for meta-level)
-    op errF : -> Formula [ctor] .
-
-    --- Linear Inuitionistic Negation (just an equation )
-    op ~_ : Formula -> Formula [ctor prec 10] .
-    
+    --- --- Error (for meta-level)
+    ---op errF : -> Formula [ctor] .
 
     ---------------------
     vars F F' G : Formula .
     var A : Atom .
     ---------------------
 
+    --- Linear Inuitionistic Negation (just an equation )
+    op ~_ : Formula -> Formula [ctor prec 10] .
+    eq ~ F = F -o bot .
+    
     --- Bi-implication as tensor of implication
     eq F o-o G = (F -o G) * (G -o F) .
 
     --- Classical negation
-    op neg : Formula -> Formula .
-    eq neg(A:Atom) = A:Atom ^ .
-    eq neg(1) = bot .
-    eq neg(0) = top .
-    eq neg(bot) = 1 .
-    eq neg(top) = 0 .
-    eq neg(F * G) = neg(F) | neg(G) .
-    eq neg(F | G) = neg(F) * neg(G) .
-    eq neg(F & G) = neg(F) o neg(G) .
-    eq neg(F o G) = neg(F) & neg(G) .
-    eq neg(F -o G) = F * neg(G) .
-    eq neg( ! F ) = ?  neg(F) .
-    eq neg( ? F ) = !  neg(F) .
+    op neg' : Formula -> Formula .
+    eq neg'(A:Atom) = A:Atom ^ .
+    eq neg'(1) = bot .
+    eq neg'(0) = top .
+    eq neg'(bot) = 1 .
+    eq neg'(top) = 0 .
+    eq neg'(F * G) = neg'(F) | neg'(G) .
+    eq neg'(F | G) = neg'(F) * neg'(G) .
+    eq neg'(F & G) = neg'(F) o neg'(G) .
+    eq neg'(F o G) = neg'(F) & neg'(G) .
+    eq neg'(F -o G) = F * neg'(G) .
+    eq neg'( ! F ) = ?  neg'(F) .
+    eq neg'( ? F ) = !  neg'(F) .
 
-    --- Intuitionistic negation
-    eq ~ F = F -o bot .
     
     --- Removing all the bangs from a formula
     op dropBangs : Formula -> Formula .
@@ -175,6 +176,16 @@ fmod MSET-FORMULA  is
     --- Multisets are built with ,
     op _,_ : MSFormula MSFormula -> MSFormula [ctor assoc comm id: empMS] .
 
+    --- Negation of a multiset of formulas
+    op neg : MSFormula -> Formula .
+    eq neg (empMS) = empMS .
+    eq neg ( (F:Formula , L:MSFormula)) = neg'(F:Formula) , neg(L:MSFormula) .
+
+    --- Adding bangs to all the formulas
+    op toBang : MSFormula -> MSFormula .
+    eq toBang(empMS) = empMS .
+    eq toBang(F:Formula, S:MSFormula) = !(F:Formula) , toBang(S:MSFormula) .
+
     --- to Latex
     op toTexS : SFormula -> String .
     op toTexMS : MSFormula -> String .
@@ -184,16 +195,10 @@ fmod MSET-FORMULA  is
 	( if S:SFormula == emp then " " else " , " + toTexS(S:SFormula) fi ) .
     eq toTexMS(F:Formula , S:MSFormula) = toTex(F:Formula) +
 	( if S:MSFormula == empMS then " " else " , " + toTexMS(S:MSFormula)fi )  .
-
-    --- Negation of a multiset of formulas
-    op neg : MSFormula -> Formula .
-    eq neg (empMS) = empMS .
-    eq neg ( (F:Formula , L:MSFormula)) = neg(F:Formula) , neg(L:MSFormula) .
 endfm
     
 
 --- Some examples
-
 --- red ! 'a o ! 'b * ! 'c .
 --- red ! 'a o ! 'b * ! 'c == (! 'a) o ( (! 'b) * (! 'c)) . *** Checking precedence
 --- red toTex(! 'a o ! 'b * ! 'c) .

@@ -1,0 +1,54 @@
+***(
+  META-LEVEL tools
+  author: Carlos Olarte
+  file: meta-level-ext.maude
+  
+  This module defines some useful functions at the meta-level needed
+  to, e.g., implement the negative phase of the proof as a metaReduce
+  and helper functions to build the derivation trees
+
+  ***)
+
+  
+fmod META-LEVEL-EXT is
+    pr META-LEVEL * (op _;_ to op_;;_ , op _,_ to op_C_ ) .
+
+    -----------------
+    var Q : Qid .
+    vars T T' : Term .
+    vars n n' : Nat .
+    var M : Module .
+    -----------------
+    
+    --- Given the name of a function returns the meta representation
+    --- of the module
+    op [[_]] : Qid -> Module .
+    eq [[Q]] = upModule(Q, false) .
+
+    --- Reduce the term T in the Module Q
+    op redIn : Qid Term -> Term .
+    eq redIn(Q, T) = 
+	getTerm(metaReduce( [[ Q ]], T)) .
+
+    --- Rewrite the term T in the Module Q
+    op rewIn : Module Term -> Term .
+    eq rewIn(M, T) = 
+	getTerm(metaRewrite( M, T, unbounded)) .
+
+    --- Extends >= to take into account bounds
+    op gteq : Bound Nat -> Bool .
+    eq gteq(unbounded, n) = true .
+    eq gteq(n', n) = n' >= n .
+
+    --- decrement operation on Bounds
+    op dec : Bound  -> Bound .
+    eq dec(unbounded) = unbounded .
+    eq dec(n) = sd(n,1) .
+
+    --- Generates a (meta) module with a unique rewriting rule T => T'
+    op newModule : Term Term -> Module .
+    op newModule : Term Term Qid -> Module .
+    eq newModule(T:Term, T':Term) = (mod 'SUBST-TREE-MOD is including 'BOOL . protecting 'ILL-RL . sorts none . none none none none rl T:Term => T':Term [none] . endm) .
+    eq newModule(T:Term, T':Term , Q) = (mod 'SUBST-TREE-MOD is including 'BOOL . protecting Q . sorts none . none none none none rl T:Term => T':Term [none] . endm) .
+    
+endfm
