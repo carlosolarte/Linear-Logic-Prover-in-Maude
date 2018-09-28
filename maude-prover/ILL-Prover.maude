@@ -261,6 +261,7 @@ mod ILL-RL is
     op isInit : Sequent -> Bool .
     eq isInit( [CC] A |- A) = true .
     eq isInit([CC ; A] empMS |- A ) = true .
+    ceq isInit([CC] CL |- F ) = true if isTensorAtom(F) and-then CL == tensorAtom2MS(F) .
     eq isInit(Sq) = false [owise] .
 
 
@@ -283,9 +284,22 @@ mod ILL-RL is
     rl [Rbot] : { bnd ; ([CC] empMS < bot > <== bot) ; Tr} => proved(Tr)  .
 
     --- Tensor
-    rl [Rtensor] : { bnd ;([CC] CL, CL' ==> G * G') ; Tr} =>
-	{ bnd ;([CC] CL ==> G) | ([CC] CL' ==> G') ; Tr . makePT(([CC] CL, CL' ==> G * G'),(([CC] CL ==> G) | ([CC] CL' ==> G')),'Rtensor) } .
-
+    ---rl [Rtensor] : { bnd ;([CC] CL, CL' ==> G * G') ; Tr} =>
+    --- { bnd ;([CC] CL ==> G) | ([CC] CL' ==> G') ; Tr . makePT(([CC] CL, CL' ==> G * G'),(([CC] CL ==> G) | ([CC] CL' ==> G')),'Rtensor) } .
+    --- case tensor x 1
+    rl [Rtensor] : { bnd ;([CC] CL ==> 1 * G') ; Tr} =>
+	{ bnd ;([CC] empMS ==> 1) | ([CC] CL ==> G') ; Tr . makePT(([CC] CL ==> 1 * G'),(([CC] empMS ==> 1) | ([CC] CL ==> G')),'Rtensor) } .
+    --- case tensor atom
+    rl [Rtensor] : { bnd ;([CC] A, CL' ==> A * G') ; Tr} =>
+	{ bnd ;([CC] A ==> A) | ([CC] CL' ==> G') ; Tr . makePT(([CC] A, CL' ==> A * G'),(([CC] A ==> A) | ([CC] CL' ==> G')),'Rtensor) } .
+    crl [Rtensor] : { bnd ;([CC ; A ] CL' ==> A * G') ; Tr} =>
+	{ bnd ;([CC ; A] empMS ==> A) | ([CC ; A] CL' ==> G') ; Tr . makePT(([CC ; A] CL' ==> A * G'),(([CC ; A] empMS ==> A) | ([CC ; A] CL' ==> G')),'Rtensor) }
+      if not in(A, CL') .
+    crl [Rtensor] : { bnd ;([CC] CL, CL' ==> G * G') ; Tr} =>
+	{ bnd ;([CC] CL ==> G) | ([CC] CL' ==> G') ; Tr . makePT(([CC] CL, CL' ==> G * G'),(([CC] CL ==> G) | ([CC] CL' ==> G')),'Rtensor) }
+	if not isOneorAtom(G) .
+    
+    
     --- Oplus
     rl [RplusA] : { bnd ; ([CC] CL ==> G o G') ; Tr} =>
 	{ bnd ; ([CC] CL ==> G) ; Tr . makePT(([CC] CL ==> G o G'),([CC] CL ==> G),'RplusA)} .
@@ -310,10 +324,12 @@ mod ILL-RL is
       --- Copy rule
     crl [RdecideC] : { n ; ([CC ; F] CL |- G) ; Tr} =>
 	{ dec(n) ; ( [CC ; F] CL < F > <== G) ; Tr . makePT(([CC ; F] CL |- G),( [CC ; F] CL < F > <== G),'RdecideC) }
-      if gteq(n, 1) and-then not isAtom(F) and-then not isInit ([CC ; F] CL |- G) .
+      if gteq(n, 1) and-then (not isAtom(F)) and-then (not isInit ([CC ; F] CL |- G)) and-then  ((not isLimp(F)) or-else (not isLimpAtom(F)) or-else atomInSet(CC) or-else subseteq(tensorAtom2MS(getAntecedent(F)),CL)) .
 
-    --- Right formula (No proof term is generated since the (flat) sequent remains the same)
-    rl [RdecideR] : { bnd ; ([CC] CL |- G) ; Tr} => { bnd ; ([CC] CL ==> G) ; Tr} .
+      --- Right formula (No proof term is generated since the (flat) sequent remains the same)
+      --- !! This can be improved if CC has atoms. 
+    crl [RdecideR] : { bnd ; ([CC] CL |- G) ; Tr} => { bnd ; ([CC] CL ==> G) ; Tr}
+      if (not isTensorAtom(G)) or-else atomInSet(CC) or-else subseteq(tensorAtom2MS(G), CL) .
 
     --- Release (No proof term is generated since the (flat) sequent remains the same)
     crl [RreleaseL] : { bnd ; ([CC] CL < F > <== G) ; Tr} => { bnd ; ( [CC] CL, F |~ G) ; Tr} if releaseL(F) .

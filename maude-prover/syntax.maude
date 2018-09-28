@@ -123,6 +123,7 @@ fmod FORMULA is
     eq isAtom(A) = true .
     eq isAtom(F) = false [owise] .
 
+    
     --- Testing if a formula is a positive atom
     op isPosAtom : Formula -> Bool .
     eq isPosAtom(Q:Qid) = true .
@@ -132,6 +133,33 @@ fmod FORMULA is
     op isNegAtom : Formula -> Bool .
     eq isNegAtom(Q:Qid ^) = true .
     eq isNegAtom(F) = false [owise] .
+
+    --- Check if a formula is a tensor of atoms
+    op isTensorAtom : Formula -> Bool .
+    eq isTensorAtom(A:Atom) = true .
+    eq isTensorAtom(A:Atom * F) = isTensorAtom(F) .
+    eq isTensorAtom(F) = false [owise] .
+
+    --- Testing if a formula is a (intuitionistic) linear implication
+    op isLimp : Formula -> Bool .
+    eq isLimp (F -o G) = true .
+    eq isLimp (F) = false [owise] .
+
+    --- Get the antedecedent of an implication
+    op getAntecedent : Formula -> Formula .
+    eq getAntecedent(F -o G) = F .
+    
+
+    --- Testing if the head of an implication is a tensor of atoms
+    op isLimpAtom : Formula -> Bool .
+    eq isLimpAtom(F -o G) = isTensorAtom(F) .
+    eq isLimpAtom(F) = false [owise] .
+
+    --- Check if a formula is 1 or an atom
+    op isOneorAtom : Formula -> Bool .
+    eq isOneorAtom(1) = true .
+    eq isOneorAtom(A:Atom) = true .
+    eq isOneorAtom(F) = false [owise] .
 
     --- To Latex
     op toTex : Formula -> String .
@@ -176,6 +204,41 @@ fmod MSET-FORMULA  is
     --- Multisets are built with ,
     op _,_ : MSFormula MSFormula -> MSFormula [ctor assoc comm id: empMS] .
 
+    -------------------
+    var F : Formula .
+    vars MS MS' : MSFormula .
+    var S : SFormula .
+    var A : Atom .
+    -------------------
+    
+    --- In predicate
+    op in : Formula MSFormula -> Bool .
+    eq in(F, (F, MS)) = true .
+    eq in(F, MS) = false [owise] .
+
+    --- In predicate
+    op in : Formula SFormula -> Bool .
+    eq in(F, (F ; MS)) = true .
+    eq in(F, MS) = false [owise] .
+
+    --- atom in Set
+    op atomInSet : SFormula -> Bool .
+    eq atomInSet( (A ; S)) = true .
+    eq atomInSet( S) = false [owise] .
+
+    --- Subset predicate
+    op subseteq : MSFormula MSFormula  -> Bool .
+    eq subseteq( empMS ,MS') = true .
+    eq subseteq( (F, MS) ,(F, MS')) = subseteq(MS, MS') .
+    eq subseteq(MS, MS') = false [owise] .
+
+    
+    --- from a isTensorAtom formula to a multiset of atoms
+    op tensorAtom2MS : Formula -> MSFormula .
+    eq tensorAtom2MS(A:Atom) = A:Atom .
+    eq tensorAtom2MS(A:Atom * F) = A:Atom , tensorAtom2MS(F) .
+    eq tensorAtom2MS(F) = empMS [owise] .
+
     --- Negation of a multiset of formulas
     op neg : MSFormula -> Formula .
     eq neg (empMS) = empMS .
@@ -191,10 +254,10 @@ fmod MSET-FORMULA  is
     op toTexMS : MSFormula -> String .
     eq toTexS(emp) = " \\LLempty " .
     eq toTexMS(empMS) = " \\LLempty " .
-    eq toTexS(F:Formula ; S:SFormula) = toTex(F:Formula) +
-	( if S:SFormula == emp then " " else " , " + toTexS(S:SFormula) fi ) .
-    eq toTexMS(F:Formula , S:MSFormula) = toTex(F:Formula) +
-	( if S:MSFormula == empMS then " " else " , " + toTexMS(S:MSFormula)fi )  .
+    eq toTexS(F ; S) = toTex(F) +
+	( if S == emp then " " else " , " + toTexS(S) fi ) .
+    eq toTexMS(F , MS) = toTex(F) +
+	( if MS == empMS then " " else " , " + toTexMS(MS) fi )  .
 endfm
     
 
