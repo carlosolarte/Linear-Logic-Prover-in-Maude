@@ -6,7 +6,7 @@
 % English  :
 % Source   : Introduction to Metamathematics
 % Name     : Kleene intuitionistic theorems (Translation MU)
-% Status   : False (Not a theorem) 
+% Status   : Non-Theorem 
 % Rating   : 
 % Comments : 
 %--------------------------------------------------------------------------

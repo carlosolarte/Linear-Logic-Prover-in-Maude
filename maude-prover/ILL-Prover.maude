@@ -241,7 +241,7 @@ mod ILL-RL is
 
     -----------------------------------------------
     vars CC CC' : SFormula . *** classical contexts
-    vars CL CL' : MSFormula . *** linear contexts
+    vars CL CL' CL1 CL2 : MSFormula . *** linear contexts
     vars F F' G G' : Formula .
     vars A A' : Atom .
     vars L L'  : LSequent .
@@ -307,8 +307,18 @@ mod ILL-RL is
 	{ bnd ; ([CC] CL ==> G') ; Tr . makePT(([CC] CL ==> G o G'),([CC] CL ==> G'),'RplusB)} .
 
     --- Implication left
-    rl [RLimp] : { bnd ; ([CC] CL, CL' < F -o F' > <== G) ; Tr} =>
-	{ bnd ; ([CC] CL ==> F) | ([CC] CL' < F' > <== G) ; Tr . makePT(([CC] CL, CL' < F -o F' > <== G), (([CC] CL ==> F) | ([CC] CL' < F' > <== G)),'RLimp)} .
+    ---rl [RLimp] : { bnd ; ([CC] CL, CL' < F -o F' > <== G) ; Tr} =>
+    --- { bnd ; ([CC] CL ==> F) | ([CC] CL' < F' > <== G) ; Tr . makePT(([CC] CL, CL' < F -o F' > <== G), (([CC] CL ==> F) | ([CC] CL' < F' > <== G)),'RLimp)} .
+
+    crl [RLimp] : { bnd ; ([CC] CL, CL' < F -o F' > <== G) ; Tr} =>
+	{ bnd ; ([CC] CL ==> F) | ([CC] CL' < F' > <== G) ; Tr . makePT(([CC] CL, CL' < F -o F' > <== G), (([CC] CL ==> F) | ([CC] CL' < F' > <== G)),'RLimp)}
+      if  (not isTensorAtom(F)) or-else atomInSet(CC) .
+
+    crl [RLimp] : { bnd ; ([CC] CL < F -o F' > <== G) ; Tr} =>
+	{ bnd ; ([CC] CL1 ==> F) | ([CC] CL2 < F' > <== G) ; Tr . makePT(([CC] CL < F -o F' > <== G), (([CC] CL1 ==> F) | ([CC] CL2 < F' > <== G)),'RLimp)}
+      if  ((isTensorAtom(F)) and-then (not atomInSet(CC))) /\ CL1 := tensorAtom2MS(F) /\ subseteq(CL1, CL) /\ CL2 := minus(CL, CL1) .
+
+      
 
     --- With L
     rl [RwithA] : { bnd ;([CC] CL < F & F' > <== G) ; Tr} => { bnd ; ([CC] CL < F > <== G) ; Tr . makePT(([CC] CL < F & F' > <== G),([CC] CL < F > <== G), 'RwithA) } .

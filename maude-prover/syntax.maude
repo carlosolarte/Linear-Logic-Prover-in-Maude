@@ -135,7 +135,7 @@ fmod FORMULA is
     eq isNegAtom(F) = false [owise] .
 
     --- Check if a formula is a tensor of atoms
-    op isTensorAtom : Formula -> Bool .
+    op isTensorAtom : Formula -> Bool [memo] .
     eq isTensorAtom(A:Atom) = true .
     eq isTensorAtom(A:Atom * F) = isTensorAtom(F) .
     eq isTensorAtom(F) = false [owise] .
@@ -227,14 +227,20 @@ fmod MSET-FORMULA  is
     eq atomInSet( S) = false [owise] .
 
     --- Subset predicate
-    op subseteq : MSFormula MSFormula  -> Bool .
+    op subseteq : MSFormula MSFormula  -> Bool [memo] .
     eq subseteq( empMS ,MS') = true .
     eq subseteq( (F, MS) ,(F, MS')) = subseteq(MS, MS') .
     eq subseteq(MS, MS') = false [owise] .
 
+    --- Multiset difference
+    op minus : MSFormula MSFormula  -> MSFormula [memo] .
+    eq minus( MS, empMS) = MS .
+    eq minus( (F, MS) ,(F, MS')) = minus(MS, MS') .
+    eq minus(MS, (F, MS')) = minus(MS, MS') [owise] .
+
     
     --- from a isTensorAtom formula to a multiset of atoms
-    op tensorAtom2MS : Formula -> MSFormula .
+    op tensorAtom2MS : Formula -> MSFormula [memo] .
     eq tensorAtom2MS(A:Atom) = A:Atom .
     eq tensorAtom2MS(A:Atom * F) = A:Atom , tensorAtom2MS(F) .
     eq tensorAtom2MS(F) = empMS [owise] .

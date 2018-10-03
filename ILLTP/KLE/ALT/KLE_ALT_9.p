@@ -1,14 +1,13 @@
 %--------------------------------------------------------------------------
-% File     : ../ILLTP//KLE_10_MU.p
+% File     : ALT//KLE_ALT_9.p
 % Domain   : Intuitionistic Syntactic 
 % Problem  : Kleene intuitionistic theorems
 % Version  : 1.0
 % English  :
 % Source   : Introduction to Metamathematics
-% Name     : Kleene intuitionistic theorems (Translation MU)
-% Status   : Non-Theorem 
+% Name     : Kleene intuitionistic theorems (Alternative translation)
+% Status   : Theorem 
 % Rating   : 
 % Comments : 
 %--------------------------------------------------------------------------
-fof(ax1, axiom,  A -o bot ).
-fof(conj, conjecture,  A -o B).
+fof(conj, conjecture,  ((A -o bot) -o bot) * ((B -o bot) -o bot) -o ((A * B -o bot) -o bot)).

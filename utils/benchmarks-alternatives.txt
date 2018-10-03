@@ -1,0 +1,27 @@
+[emp] 'A -o 0  |~ 'A -o 'B
+[emp] 'A |~ ('A -o 0) -o 'B
+[emp] 'B |~ (! 'A) -o 'B
+[emp] ('A -o 'B) * ! ('B -o 'A) |~ 'A -o 'B
+[emp] ! ('A -o 'B) * ('B -o 'A) |~ 'B -o 'A
+[emp] ('A o-o 'B) , 'A |~  'B * ('B -o 'A)
+[emp] ('A o-o 'B) , 'B |~  'A * ('A -o 'B)
+[emp] empMS |~ ( ~ ~ ('A & 'B)) -o ( (~ ~ 'A ) & ~ ~ 'B )
+[emp] empMS |~ ((~ ~ 'A) * (~ ~ 'B)) -o ~ ~ ('A * 'B)
+[emp] empMS |~ (~ ~ (!('A -o 'B) * ! ('B -o 'A)) ) -o ((~ ~ ('A -o 'B)) & (~ ~ ('B -o 'A)) )
+[emp] empMS |~ ((~ ~ ('A -o 'B)) * (~ ~ ('B -o 'A))) -o (~ ~ ( 'A o-o 'B))
+[emp] empMS |~ ((! 'A ) * (! 'A) ) o-o ! 'A 
+[emp] 'A |~ (('A -o 'B) -o 'B) * ('B -o ( (! 'A) -o 'B ))
+[emp] 'B |~ ((!('A -o 'B)) -o 'B) * ('B -o ( (! 'A) -o 'B )) 
+[emp] ~ 'A |~ ((!('A -o 'B) -o ~ 'A)) * ( ('A -o 0) -o ('A -o 'B))
+[emp] 'B -o 0 |~ ('A -o 'B) o-o ('A -o 0)
+[emp] 'B |~ ( ('A * ! 'B) -o 'A) * ('A -o ('A * 'B)) 
+[emp] 'B -o 0 |~ (((! 'A) * 'B ) -o 'B) * ('B -o ('A * 'B))
+[emp] empMS |~ ~ ( (!('A -o ~ 'A)) * ((~ (! 'A)) -o ! 'A) )
+[emp] empMS |~ ~ (! (~ (! ( ~ 'A -o 0 ) -o 'A )))
+[emp] empMS |~ ('A * ('B * ('B -o 0))) o-o  ( 'B * ('B -o 0) )
+[emp] empMS |~ ( (~ ~ 'A) *  (~ 'B)) -o ~ ('A -o 'B)
+[emp] empMS |~ ( ~ (  (! 'A) -o 'B)) -o ( (~ ('A -o 0)) & ~ 'B)
+[emp] empMS |~ (! ( ~( (! 'A) -o 'B))) -o ~ ( ( 'A * ~ 'B) -o 0)
+[emp] empMS |~ (~ ~ ('A * (~ 'B))) -o ~ ('A -o 'B)
+[emp] empMS |~ (~ ~ ('A -o 'B)) -o (~ ('A * (~ 'B)))
+[emp] empMS |~ (( 'A * ~ 'B) -o 0) -o (~ ( !  ( ~ ( ! 'A -o 'B))))

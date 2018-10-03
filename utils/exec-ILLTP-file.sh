@@ -9,7 +9,10 @@ MAUDE_FILES_DIR="../maude-prover"
 sedcmd="gsed" #Linux: sedcmd="sed"
 
 #Limit for contraction/copy rule
-copy_limit="5"
+copy_limit="100"
+
+#TIMEOUT
+TIMEOUT=2
 
 #Finding Maude
 maude_exec=`which maude`
@@ -40,6 +43,7 @@ fi
 echo "----------------------------------"
 echo "LaTeX Output: "$output_file
 echo "Limit on copy rule: "$copy_limit
+echo "Timeout: "$TIMEOUT
 echo "----------------------------------"
 
 #Latex Header
@@ -60,8 +64,7 @@ do
   goal=""
   for l in $lines
   do
-    lseq=`echo $l |  sed -e 's/fof(.*,//' -e 's/)[\s]*\.//'`
-    lseq=`echo $lseq | $sedcmd -r "s/[a-zA-Z]+/\'&/g" | $sedcmd -e "s/-'o/-o/g" | sed -e 's/+/o/g'`
+    lseq=`echo $l |  sed -e 's/fof(.*,//' -e 's/)[\s]*\.//' | $sedcmd -r "s/[a-zA-Z]+/\'&/g" | $sedcmd -e "s/-'o/-o/g" -e "s/+/o/g" -e "s/'bot/bot/g" -e "s/'top/top/g"`
     if [[ "$l" == *"axiom"* ]]; then
       premisses+=($lseq)
     else
@@ -77,15 +80,19 @@ do
   unset IFS
   seq="([emp] $prem |~ $goal )"
   echo $seq
-  result=`echo "red solve($copy_limit, $seq) ." | $maude_command | grep "String" | sed -e s/\"//g -e s/result\ String\://g -e s/"Maude> Bye."//g`
-  title=${seq_file//_/\\_}
-  #if [[  -z  $result  ]] ;  then
-    #$result="\failC"
-  #fi
-  echo -e "\proveILLFile{$title}{$result}" >> $output_file
+  resultrow=`echo "red solve($copy_limit, $seq) ." | timeout $TIMEOUT $maude_command`
+  title=$seq_file
+  if [[ $resultrow != *"String"*  ]] ;  then
+    result="timeout!"
+    str_time="timeout!"
+  else
+    result=`echo "$resultrow" | grep "String" | sed -e s/\"//g -e s/result\ String\://g -e s/"Maude> Bye."//g`
+    str_time=`echo "$resultrow" | grep -o '[0-9]*ms real' | grep -o '[0-9]*'`
+  fi
+  echo -e "\proveILLFileT{$title}{$str_time}{$result}" >> $output_file
 done
-
 echo -e "\end{document}" >> $output_file
+gsed -i 's/_/\\_/g' $output_file
 echo "DONE!"
 echo "----------------------------------"
 echo "LaTeX Output: "$output_file
