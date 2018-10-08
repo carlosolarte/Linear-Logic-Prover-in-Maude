@@ -1,3 +1,25 @@
+%%%%%%%%%%%%%%%%%%%%
+%%%% VI COMMANDS
+%%%%%%%%%%%%%%%%%%%
+%gsed -i 's/_/\\_/g' file.tex
+%s/LLSec{ \\LLempty }{.\{-}}/LLSeq{\\LLempty}{\\Delta}/g
+%s/LLSec{.\{-}}/LLSeq{\\Gamma}/g
+%s/infer\[\\Rneg\]{\\LLSeq{\\Gamma}{.\{-}}/infer\[\\Rneg\]{\\LLSeq{\\Gamma}{\\Delta}/g
+%s/\\proveILLFileT.\{-}timeout!}{timeout!}//g
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 \documentclass{article}
 \usepackage{fullpage}
 
@@ -141,10 +163,10 @@ Proof trees for the benchmark MCC: encoding Petri-nets into linear logic. See mo
 
 \section{General Information}
 \begin{itemize}
- \item Test run on a QEMU Virtual CPU, 2GHz, 64 bits, 2GiB of RAM running Ubuntu. 
+ \item Test run on a QEMU Virtual CPU, 2GHz, 64 bits, 2GB of RAM running Ubuntu. 
+\item Timeout: 2min. 
 \item Maude version: 2.7.1 built: Oct 2 2017.
 \item The search procedure considers proofs  using up to 101 times the copy rule (focusing on one of the formulas of the classical context).
-\item Timeout: 2min. 
 \item For the sake of readability, the classical context containing the encoding of transition rules is depicted as \blue{$\Gamma$} . Moreover, $\Delta$ represents the hypothesis of the conjecture that, in all the cases, include the encoding of the rules and the initial marking. 
 \item Number of files: 2.073
 \item Proved sequents: 183 

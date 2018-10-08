@@ -258,7 +258,7 @@ mod ILL-RL is
     
 
     --- Test if a sequent is provable by applying init
-    op isInit : Sequent -> Bool .
+    op isInit : Sequent -> Bool [memo] .
     eq isInit( [CC] A |- A) = true .
     eq isInit([CC ; A] empMS |- A ) = true .
     ceq isInit([CC] CL |- F ) = true if isTensorAtom(F) and-then CL == tensorAtom2MS(F) .
@@ -332,9 +332,9 @@ mod ILL-RL is
     crl [RdecideL] : { bnd ; ([CC] CL, F |- G) ; Tr} => { bnd ; ( [CC] CL < F > <== G) ; Tr} if not isAtom(F) .
 
       --- Copy rule
-    crl [RdecideC] : { n ; ([CC ; F] CL |- G) ; Tr} =>
-	{ dec(n) ; ( [CC ; F] CL < F > <== G) ; Tr . makePT(([CC ; F] CL |- G),( [CC ; F] CL < F > <== G),'RdecideC) }
-      if gteq(n, 1) and-then (not isAtom(F)) and-then (not isInit ([CC ; F] CL |- G)) and-then  ((not isLimp(F)) or-else (not isLimpAtom(F)) or-else atomInSet(CC) or-else subseteq(tensorAtom2MS(getAntecedent(F)),CL)) .
+    crl [RdecideC] : { bnd ; ([CC ; F] CL |- G) ; Tr} =>
+	{ dec(bnd) ; ( [CC ; F] CL < F > <== G) ; Tr . makePT(([CC ; F] CL |- G),( [CC ; F] CL < F > <== G),'RdecideC) }
+      if gteq(bnd, 1) and-then (not isAtom(F)) and-then (not isInit ([CC ; F] CL |- G)) and-then  ((not isLimp(F)) or-else (not isLimpAtom(F)) or-else atomInSet(CC) or-else subseteq(tensorAtom2MS(getAntecedent(F)),CL)) .
 
       --- Right formula (No proof term is generated since the (flat) sequent remains the same)
       --- !! This can be improved if CC has atoms. 
@@ -403,9 +403,9 @@ mod  ILL-PROVER is
       if RT := provable?({ bnd ; sq ; none}) /\ T := if RT == failure then failtree else transform(l(toSeq(sq)), getProofTerm(getSubstitution(RT))) fi .
     
     op solve : Sequent -> String .
-    op solve : Nat Sequent -> String .
+    op solve : Bound Sequent -> String .
     eq solve(Sq:Sequent) =  toTex(buildTree(unbounded, Sq:Sequent)) .
-    eq solve(n:Nat, Sq:Sequent) =  toTex(buildTree(n:Nat, Sq:Sequent)) .
+    eq solve(bnd, Sq:Sequent) =  toTex(buildTree(bnd, Sq:Sequent)) .
 
     --- We assume that Sq is a sequent of the shape |~
     op prove : Sequent -> Conf .

@@ -9,10 +9,10 @@ MAUDE_FILES_DIR="../maude-prover"
 sedcmd="gsed" #Linux: sedcmd="sed"
 
 #Limit for contraction/copy rule
-copy_limit="100"
+copy_limit="5"
 
 #TIMEOUT
-TIMEOUT=2
+TIMEOUT=10
 
 #Finding Maude
 maude_exec=`which maude`
