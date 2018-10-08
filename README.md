@@ -1,5 +1,5 @@
-# Benchmarking-Linear-Logic
-Provers for intuitionistic and classical linear logic plus a set of benchmarks inspired from Kleene's intuitionistic theorems
+# Linear Logic Theorem Prover in Maude
+Provers for intuitionistic and classical linear logic plus.
 
 ## Getting Started
 
@@ -14,7 +14,7 @@ The implementation includes the following files:
 - <b>translations-ILL.maude</b>: Different translations from LJ sequents into linear logic formulas.
 
 ## Benchmarks 
-The directory TPTP contains several benchmarks resulting from translations of Kleene's intuitionistic theorems into linear logic formulas. The file benchmark.txt contains some intuitionistic sequents (see syntax below) that can be translated into lienar logic sequents (translations-ILL.maude).
+The directory ```utils``` contains some scripts to execute LLTP files (see [https://github.com/meta-logic/lltp]). The file benchmark.txt contains some intuitionistic sequents (see syntax below) that can be translated into lienar logic sequents (translations-ILL.maude).
 
 ## Examples
 Loading the system:
