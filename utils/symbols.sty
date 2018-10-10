@@ -1,0 +1,127 @@
+%Definition of Linear Logic math symbols in LaTeX
+\usepackage{amsmath,amssymb}
+\usepackage{proof}
+\usepackage{latexsym}
+\usepackage{stmaryrd}
+\usepackage[demo]{graphicx}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[many]{tcolorbox}
+\usepackage{xstring}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{cmll}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{wasysym}
+
+% Colors
+\newcommand\red[1]{\textcolor{red}{#1}}
+\newcommand\blue[2]{\textcolor{blue}{#1}}
+
+\newcommand\LLperp{\bot}
+\newcommand\LLzero{\mathbf{0}}
+\newcommand\LLone{\mathbf{1}}
+\newcommand\LLbot{\perp}
+\newcommand\LLtop{\top}
+\newcommand\LLbang{\mathop{!}}
+\newcommand\LLquest{\mathord{?}}
+\newcommand\LLtensor{\otimes}
+\newcommand\LLwith{\mathbin{\&}}
+\newcommand\LLpar{\bindnasrepma}
+\newcommand\LLplus{\oplus}
+\newcommand\LLimp{\mathbin{-\hspace{-0.70mm}\circ}}
+\newcommand\LLiff{\multimapboth}
+\newcommand\LLempty{\cdot}
+%\newcommand\LLSec[3]{\blue{#1} ~:~ #2 \vdash #3}
+\newcommand\LLSec[3]{\blue{\Gamma} ~:~ #2 \vdash #3}
+\newcommand\LLSecR[3]{\blue{#1} ~:~ #2 \Rightarrow #3}
+\newcommand\LLSecL[4]{\blue{#1} ~:~ #2 ~[\red{#3}] \Leftarrow #4}
+\newcommand\LLSecC[2]{\vdash \blue{#1} ~:~ #2}
+\newcommand\LLSecRC[3]{\blue{#1} ~:~ #2 \Rightarrow \red{#3}}
+\newcommand\Rtop{\top}
+\newcommand\Rzero{0}
+\newcommand\Rone{1}
+\newcommand\Rinit{I}
+\newcommand\RinitC{I}
+\newcommand\Rtensor{\otimes}
+\newcommand\RplusA{\oplus_{1}}
+\newcommand\RplusB{\oplus_{1}}
+\newcommand\RwithA{\LLwith_{1}}
+\newcommand\RwithB{\LLwith_{2}}
+\newcommand\Rbang{\LLbang}
+\newcommand\RdecideR{D_{R}}
+\newcommand\RdecideL{D_{L}}
+\newcommand\RdecideC{D_{C}}
+\newcommand\RreleaseR{R_{R}}
+\newcommand\RreleaseL{R_{L}}
+\newcommand\RLimp{\LLimp}
+\newcommand\Rneg{\star}
+\newcommand\Rbot{\bot}
+\newcommand\Sec[2]{#1\vdash #2}
+
+%LJ
+\newcommand\LJor{\vee}
+\newcommand\LJand{\wedge}
+\newcommand\LJimp{\rightarrow}
+\newcommand\LJneg{\neg}
+\newcommand\LJiff{\leftrightarrow}
+\newcommand\LJTrue{\top}
+\newcommand\LJFalse{\bot}
+\newcommand\LJSec[2]{#1 \vdash #2}
+\newcommand\Limp{\supset_{L}}
+\newcommand\DA{\vee_{R1}}
+\newcommand\DB{\vee_{R2}}
+\newcommand\LJInit{I}
+
+
+% TimeOuts
+\newcommand\timeout{\red{Timeout!}}
+
+
+
+\newcommand\bang{\mathop{!}}
+\newcommand\bottom{\perp}
+\newcommand{\CLL}{\mathsf{CLL}}
+\newcommand{\cut}{\mathsf{cut}}
+\newcommand\eg{\hbox{\textit{e.g.}}}
+\newcommand{\etal}{\emph{et al.}}
+\newcommand{\FILL}{\mathsf{FILL}}
+\newcommand\ie{\hbox{\textit{i.e.}}}
+\newcommand{\iimp}{\to}
+\newcommand{\IL}{\mathsf{IL}}
+\newcommand{\ILL}{\mathsf{ILL}}
+\newcommand{\init}{\mathsf{init}}
+\newcommand{\limp}{\LLimp}
+\newcommand{\LL}{\mathsf{LL}}
+\newcommand{\LLF}{\mathsf{LLF}}
+\newcommand\lpar{\bindnasrepma}
+\newcommand\one{1}
+\newcommand\quest{\mathord{?}}
+\newcommand\seq[2]{#1\vdash #2}
+\newcommand\Seq[2]{#1\vdash #2}
+\renewcommand\sim{\leftrightarrow}
+\newcommand\tensor\otimes
+\newcommand\zero{0}
+
+% Sequents and proofs
+\newcommand\TitleSeq[1]{\fbox{$#1$}\\\\}
+\newcommand\TitleSeqC[2]{\fbox{\resizebox{.7\columnwidth}{!}{(#1)~$#2$}}\\\\}
+\newcommand\TitleSeqCplain[2]{\fbox{{(#1)~$#2$}}\\\\}
+\newcommand\failC{ {\bf fail}}
+\newcommand{\proveILLFile}[2]{\noindent\fbox{\texttt{file: #1}}\\\noindent\resizebox{.5\textwidth}{!}{$#2$}}
+\newcommand{\proveILLFileT}[3]{\noindent\fbox{\texttt{file: #1 (#2 ms)}}\\\noindent\resizebox{.5\textwidth}{!}{$#3$}}
+\newcommand\wrapProof[3]{
+  \noindent #1 (#2ms)\\\\
+    {\resizebox{.5\textwidth}{!}{#3}}\\\\
+}
+\newcommand\wrapProofplain[3]{
+  \noindent #1 (#2ms)\\\\
+    {#3}\\\\
+}
+
+\newcommand\wrapProoftout[1]{
+  \noindent #1 (\timeout)\\\\
+    {\timeout}\\\\
+}
+
+
