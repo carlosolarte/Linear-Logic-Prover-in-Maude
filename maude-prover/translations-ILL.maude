@@ -1,8 +1,6 @@
 ***(
-  Translating LJ sequents into ILL
+  Translating Intuitionistic Logic sequents into ILL
   Author: Carlos Olarte
-  File: translations.maude
-  
   See http://llwiki.ens-lyon.fr/mediawiki/index.php/Translations_of_intuitionistic_logic
   for further details on the encodings
   ***)
@@ -76,7 +74,6 @@ mod CALL-BY-VALUE  is
     eq toILLF(F lor G) = toILLF(F) o toILLF(G) .
     eq toILLF(neg F) = toILLF(F to False) .
 
-    
     eq toILL(S vdash F) = [emp] toILL(S) |~ toILLF(F) .
 endm
 
@@ -127,11 +124,11 @@ mod 01-ENC  is
     eq toILL0( (F , S)) = toILLF0(F) , toILL0(S) .
     eq toILL1( (F , S)) = toILLF1(F) , toILL1(S) .
 
-
     eq toILL(S vdash F) = [emp] toBang(toILL0(S)) |~ toILLF1(F) .
 endm
 
 --- Translation proposed in the paper
+--- This translation does not preserve provability!
 mod MULTIPLICATIVE is
     inc TO-ILL .
 
@@ -153,8 +150,9 @@ mod MULTIPLICATIVE is
     eq toILL(S vdash F) = [emp] (toILL(S)) |~ toILLF(F) .
 endm
 
+eof
 
---- Examples
+--- Examples of use 
 --- select CALL-BY-NAME .
 --- red proveIt( nil vdash A to A) .
 --- red proveIt( A land B vdash A lor A) .

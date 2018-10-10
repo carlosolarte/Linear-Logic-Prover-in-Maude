@@ -1,9 +1,10 @@
 ***(
-  LJ System 
+  LJ System
+  A naive implementation of the LJ system for intuitionistic
+  propositional logic 
   author: Carlos Olarte
-  file: LJ-prover.maude
+
   *)  
-    
 
 --- ===================
 --- SYNTAX

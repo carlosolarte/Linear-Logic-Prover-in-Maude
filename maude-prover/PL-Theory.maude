@@ -1,7 +1,6 @@
 ***(
   Syntax of propositional logic
   Author: Carlos Olarte
-  File: PL-Theory.maude
 
   Formulas in PL are built as follow:
   Atom ::= A B C P Q R
@@ -15,7 +14,6 @@
   separated (multi)set of formulas and F a formula
 
   ***)
-
     
 ----------------
 --- Syntax of PL

@@ -1,7 +1,6 @@
 ***(
-  Translating PL sequents into the LJ System
+  Translating Intuitionistic logic sequents into the LJ System
   Author: Carlos Olarte
-  File: translation-LJ.maude
   ***)
     
 load LJ-prover .

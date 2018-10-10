@@ -1,7 +1,6 @@
 ***(
   Syntax of Propositional Linear Logic
   author: Carlos Olarte
-  file: syntax.maude
   
   This file contains the syntax of propositional
   linear logic formulas. We use QID (literals, e.g., 'a, 'b) to
@@ -13,6 +12,8 @@
   The grammar is as follows:
     
   F ::= A | A ^ | 1 | 0 | bot | top | F * F | F|F | F & F | F o F | F -o F
+
+  Atoms have a positive bias (for focusing)
 
   We introduce the classical connectives (including, e.g., par) and
   also the intuitionistic ones (i.e.., -o)  In the classical system we
@@ -38,7 +39,7 @@ fmod FORMULA is
     op _^ : Atom -> Atom [ctor prec 10] .
     eq ( (A:Atom ^) ^ ) = A:Atom . --- double (atomic) negation
 
-    --- Some atoms
+    --- Some representative atoms
     ops a b c p q s : -> Atom .
     eq a = 'a . eq b = 'b . eq c = 'c .
     eq p = 'p . eq q = 'q . eq s = 's .
@@ -60,9 +61,6 @@ fmod FORMULA is
     --- Exponentials
     op !_ : Formula -> Formula [ctor prec 20] .
     op ?_ : Formula -> Formula [ctor prec 20] .
-
-    --- --- Error (for meta-level)
-    ---op errF : -> Formula [ctor] .
 
     ---------------------
     vars F F' G : Formula .
@@ -91,7 +89,6 @@ fmod FORMULA is
     eq neg'( ! F ) = ?  neg'(F) .
     eq neg'( ? F ) = !  neg'(F) .
 
-    
     --- Removing all the bangs from a formula
     op dropBangs : Formula -> Formula .
     eq dropBangs( ! F ) = dropBangs(F) .
@@ -123,7 +120,6 @@ fmod FORMULA is
     eq isAtom(A) = true .
     eq isAtom(F) = false [owise] .
 
-    
     --- Testing if a formula is a positive atom
     op isPosAtom : Formula -> Bool .
     eq isPosAtom(Q:Qid) = true .
@@ -149,7 +145,6 @@ fmod FORMULA is
     op getAntecedent : Formula -> Formula .
     eq getAntecedent(F -o G) = F .
     
-
     --- Testing if the head of an implication is a tensor of atoms
     op isLimpAtom : Formula -> Bool .
     eq isLimpAtom(F -o G) = isTensorAtom(F) .
@@ -266,7 +261,8 @@ fmod MSET-FORMULA  is
 	( if MS == empMS then " " else " , " + toTexMS(MS) fi )  .
 endfm
     
-
+eof
+    
 --- Some examples
 --- red ! 'a o ! 'b * ! 'c .
 --- red ! 'a o ! 'b * ! 'c == (! 'a) o ( (! 'b) * (! 'c)) . *** Checking precedence

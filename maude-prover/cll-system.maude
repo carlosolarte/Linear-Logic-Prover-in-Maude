@@ -1,7 +1,7 @@
 ***(
   Focused system for Classical Linear Logic 
   author: Carlos Olarte
-  file: cll-system.maude
+
   
   Sequents may have the following shape
   (1) unfocus:|~ [ Gamma ] Delta 

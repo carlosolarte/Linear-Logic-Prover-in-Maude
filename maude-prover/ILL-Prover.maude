@@ -1,7 +1,6 @@
 ***(
   Focused system for Intuitionistic Linear Logic 
   author: Carlos Olarte
-  file: ill-system.maude
   
   Sequents  have one of the following shape
   (1) unfocus: [ Gamma ] Delta |~ G
@@ -25,16 +24,15 @@
   ------------------------------------------------------------------
 
   A configuration takes the form { n ; L ;PT } where L is a list of unproved
-  sequents and PT is a proof term
+  sequents, PT is a proof term and "n" is the maximum number of times
+  the copy rule (decision on the classical context)
 
   Initial goals take the form prove(S) where S is a sequent
   or prove(F) where F is a formula In these cases, the default limit
-  LIMIT --unbounded-- is used
+  LIMIT --unbounded-- is used (for the copy rule)
   Suitable alternatives allows for defining a different
-  limit, eg prove(n, F) where "n" is the maximum number of times the copy
-  rule (decision on the classical context) can be applied.
-  Using "unbounded" means that the
-  prover is complete but it may take a long time to find a proof
+  limit, eg prove(n, F) Using "unbounded" means that the
+  prover is complete but proofs usually takes more time (and memory)
 
   Definition of the rules (positive phase) are in the module
   ILL-RL. Definitions for the negative phase are in the functional
@@ -225,7 +223,7 @@ fmod ILL-EQ is
     eq [CC] CL, F o F' |~ G = ([CC] CL, F |~ G) | ([CC] CL, F' |~ G) . --- plusL
     eq [CC] CL, ! F |~ G = [CC ; F] CL |~ G . --- bangL
 	
-	--- some simplifications (due to LL equivalence)
+	--- some simplifications (due to ILL equivalence)
     eq [CC ; F & F'] CL |~ G =  [CC ; F ; F'] CL |~ G . --- !(F& F') == !F * ! F'
     eq [CC ; 0] CL |~ G =  none . --- !0 |-- 0
     eq [CC ; ! F] CL |~ G =  [CC ; F] CL |~ G . --- !!F == !F
@@ -284,6 +282,11 @@ mod ILL-RL is
     rl [Rbot] : { bnd ; ([CC] empMS < bot > <== bot) ; Tr} => proved(Tr)  .
 
     --- Tensor
+    --- The tensor rule considers several cases to make more
+    --- deterministic the splitting of the context Cases include when
+    --- the formula takes the form F x G and F is either an atom or 1
+    --- A more general approach is to use lazy splitting
+    
     ---rl [Rtensor] : { bnd ;([CC] CL, CL' ==> G * G') ; Tr} =>
     --- { bnd ;([CC] CL ==> G) | ([CC] CL' ==> G') ; Tr . makePT(([CC] CL, CL' ==> G * G'),(([CC] CL ==> G) | ([CC] CL' ==> G')),'Rtensor) } .
     --- case tensor x 1
@@ -307,6 +310,7 @@ mod ILL-RL is
 	{ bnd ; ([CC] CL ==> G') ; Tr . makePT(([CC] CL ==> G o G'),([CC] CL ==> G'),'RplusB)} .
 
     --- Implication left
+    --- Similar cases as in the tensor rule
     ---rl [RLimp] : { bnd ; ([CC] CL, CL' < F -o F' > <== G) ; Tr} =>
     --- { bnd ; ([CC] CL ==> F) | ([CC] CL' < F' > <== G) ; Tr . makePT(([CC] CL, CL' < F -o F' > <== G), (([CC] CL ==> F) | ([CC] CL' < F' > <== G)),'RLimp)} .
 
@@ -318,9 +322,7 @@ mod ILL-RL is
 	{ bnd ; ([CC] CL1 ==> F) | ([CC] CL2 < F' > <== G) ; Tr . makePT(([CC] CL < F -o F' > <== G), (([CC] CL1 ==> F) | ([CC] CL2 < F' > <== G)),'RLimp)}
       if  ((isTensorAtom(F)) and-then (not atomInSet(CC))) /\ CL1 := tensorAtom2MS(F) /\ subseteq(CL1, CL) /\ CL2 := minus(CL, CL1) .
 
-      
-
-    --- With L
+      --- With L
     rl [RwithA] : { bnd ;([CC] CL < F & F' > <== G) ; Tr} => { bnd ; ([CC] CL < F > <== G) ; Tr . makePT(([CC] CL < F & F' > <== G),([CC] CL < F > <== G), 'RwithA) } .
     rl [RwithB] : { bnd ;([CC] CL < F & F' > <== G) ; Tr} => { bnd ; ([CC] CL < F' > <== G) ; Tr . makePT(([CC] CL < F & F' > <== G),([CC] CL < F' > <== G), 'RwithB) } .
 

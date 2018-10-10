@@ -1,7 +1,6 @@
 ***(
   META-LEVEL tools
   author: Carlos Olarte
-  file: meta-level-ext.maude
   
   This module defines some useful functions at the meta-level needed
   to, e.g., implement the negative phase of the proof as a metaReduce
