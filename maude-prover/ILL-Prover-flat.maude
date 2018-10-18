@@ -357,4 +357,4 @@ red prove(([emp] 'A |~ 'A * 1)) .
 red provable?(prove(([emp] 'A |~ 'A * 1))) .
 search [1] prove(4, ([emp]! ((! 'A -o 'B) & (! 'B -o 'A)),! ((! 'B -o 'C) & (! 'C -o 'B)) |~ (! 'A -o 'C) & (! 'C -o 'A))) =>* proved .
 red solve(4, ([emp]! ((! 'A -o 'B) & (! 'B -o 'A)),! ((! 'B -o 'C) & (! 'C -o 'B)) |~ (! 'A -o 'C) & (! 'C -o 'A))) .
-red so
+z
