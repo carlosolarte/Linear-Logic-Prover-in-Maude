@@ -1,5 +1,5 @@
 # Linear Logic Theorem Prover in Maude
-Provers for intuitionistic and classical linear logic plus.
+Provers for intuitionistic and classical linear logic.
 
 ## Getting Started
 
